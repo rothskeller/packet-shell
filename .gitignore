@@ -3,3 +3,4 @@
 *.pdf
 packet.conf
 packet.log
+packet-cmd
