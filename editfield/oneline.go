@@ -31,7 +31,7 @@ func (e *Editor) onelineMode() (modefunc, Result) {
 	e.out(entryStyle, 0)
 	e.out(e.value, len(e.value))
 	fieldWidth = e.fieldWidth
-	if entryx+fieldWidth >= e.screenWidth {
+	if fieldWidth == 0 || entryx+fieldWidth >= e.screenWidth {
 		fieldWidth = e.screenWidth - entryx - 1
 	}
 	if len(e.value) < fieldWidth {
