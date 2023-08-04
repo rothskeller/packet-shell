@@ -10,9 +10,9 @@ import (
 	"github.com/rothskeller/packet/envelope"
 	"github.com/rothskeller/packet/incident"
 	"github.com/rothskeller/packet/message"
-	"github.com/rothskeller/packet/message/checkin"
-	"github.com/rothskeller/packet/message/checkout"
-	"github.com/rothskeller/packet/message/ics213"
+	"github.com/rothskeller/packet/xscmsg/checkin"
+	"github.com/rothskeller/packet/xscmsg/checkout"
+	"github.com/rothskeller/packet/xscmsg/ics213"
 )
 
 // cmdNew implements the new command.

@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/rothskeller/packet-cmd/shell"
-	"github.com/rothskeller/packet/message/allmsg"
+	"github.com/rothskeller/packet/xscmsg/allmsg"
 )
 
 func main() {
