@@ -25,7 +25,6 @@ func cmdEdit(args []string) bool {
 		errorsOnly bool
 		env        *envelope.Envelope
 		msg        message.Message
-		emsg       message.IEdit
 		err        error
 	)
 	// Check arguments
@@ -55,10 +54,9 @@ func cmdEdit(args []string) bool {
 	if env, msg, err = incident.ReadMessage(lmi); err != nil {
 		return false
 	}
-	if m, ok := msg.(message.IEdit); ok {
-		emsg = m
-	} else {
-		fmt.Fprintf(os.Stderr, "ERROR: editing is not supported for %ss\n", msg.Type().Name)
+	// Make sure the message is editable.
+	if !msg.Editable() {
+		fmt.Fprintf(os.Stderr, "ERROR: editing is not supported for %ss\n", msg.Base().Type.Name)
 		return false
 	}
 	if env.IsFinal() {
@@ -70,7 +68,7 @@ func cmdEdit(args []string) bool {
 		return false
 	}
 	// Start the editor.
-	return editMessage(lmi, env, emsg, startAt, errorsOnly)
+	return editMessage(lmi, env, msg, startAt, errorsOnly)
 }
 
 // helpEdit prints the help message for the edit command.
@@ -96,31 +94,26 @@ Messages with validation errors are removed from the send queue.
 }
 
 // editMessage starts a message editor for a message.
-func editMessage(lmi string, env *envelope.Envelope, msg message.IEdit, startAt string, errorsOnly bool) bool {
+func editMessage(lmi string, env *envelope.Envelope, msg message.Message, startAt string, errorsOnly bool) bool {
 	var (
-		fields     []*message.EditField
+		fields     []*message.Field
 		labelWidth int
 		state      *term.State
 		editor     *editfield.Editor
 		fieldidx   int
 		err        error
-		field      *message.EditField
-		nvalue     string
-		changed    bool
+		field      *message.Field
 		sawerror   bool
 		result     editfield.Result
 	)
-	// Get a list of edit fields.
-	fields = msg.EditFields()
-	fields = append(fields, nil)
-	copy(fields[1:], fields)
-	fields[0] = &message.EditField{
-		Label: "To",
-		Value: strings.Join(env.To, ", "),
-		Width: 80,
-		Help:  "This is the list of addresses to which the message is sent.  Each address must be a JNOS mailbox name, a BBS network address, or an email address.  The addresses must be separated by commas.  At least one address is required.",
+	// Make up a "Field" for the "To" addresses.
+	fields = append(fields, newToAddressField(&env.To))
+	// Add after that all of the editable fields of the message.
+	for _, f := range msg.Base().Fields {
+		if f.EditHelp != "" {
+			fields = append(fields, f)
+		}
 	}
-	applyToField(fields[0], env) // set initial Problem
 	// Find the longest field label.
 	for _, f := range fields {
 		labelWidth = max(labelWidth, len(f.Label))
@@ -132,41 +125,46 @@ func editMessage(lmi string, env *envelope.Envelope, msg message.IEdit, startAt 
 	// Edit the fields in order.
 	fieldidx, field = startingField(fields, startAt)
 	for {
-		nvalue, changed, result = editor.Edit(
-			field.Label, field.Value, field.Help, field.Hint, field.Width, field.Choices, field.Multiline)
+		var (
+			width   int
+			nvalue  string
+			changed bool
+			problem string
+		)
+		if width = field.EditWidth; width == 0 {
+			for _, c := range field.Choices.ListHuman() {
+				width = max(width, len(c))
+			}
+		}
+		nvalue, changed, result = editor.Edit(field.Label, field.EditValue(field), field.EditHelp, field.EditHint, width,
+			field.Choices.ListHuman(), field.Multiline)
 		if result == editfield.ResultError || result == editfield.ResultCtrlC {
-			editor.Display(field.Label, field.Value)
+			editor.Display(field.Label, field.EditValue(field))
 			break
 		}
-		field.Value = nvalue
-		if fieldidx == 0 {
-			applyToField(field, env)
-		} else {
-			msg.ApplyEdits()
+		field.EditApply(field, nvalue)
+		editor.Display(field.Label, field.EditValue(field))
+		if problem = field.PresenceValid(); problem == "" {
+			problem = field.EditValid(field)
 		}
-		editor.Display(field.Label, field.Value)
-		if field.Problem != "" && (!sawerror || changed) {
-			editor.DisplayError(field.Problem)
+		if problem != "" && (!sawerror || changed) {
+			editor.DisplayError(problem)
 			sawerror = true
 			continue
 		}
 		sawerror = false
 		if result == editfield.ResultEnter || result == editfield.ResultTab {
 			fieldidx++
-			if errorsOnly {
-				for fieldidx < len(fields) && fields[fieldidx].Problem == "" {
-					fieldidx++
-				}
+			for fieldidx < len(fields) && !editableField(fields[fieldidx], errorsOnly) {
+				fieldidx++
 			}
 			if fieldidx >= len(fields) {
 				break
 			}
 		} else if result == editfield.ResultBackTab {
 			fieldidx--
-			if errorsOnly {
-				for fieldidx >= 0 && fields[fieldidx].Problem == "" {
-					fieldidx--
-				}
+			for fieldidx >= 0 && !editableField(fields[fieldidx], errorsOnly) {
+				fieldidx--
 			}
 			if fieldidx < 0 {
 				break
@@ -177,19 +175,19 @@ func editMessage(lmi string, env *envelope.Envelope, msg message.IEdit, startAt 
 		field = fields[fieldidx]
 	}
 	// Make sure we have a valid LMI.  We have to have one to save the file.
-	newlmi := msg.GetOriginID()
+	newlmi := *msg.Base().FOriginMsgID
 	if !msgIDRE.MatchString(newlmi) {
 		if lmi != "" {
 			newlmi = lmi // restore the one it had when we started
 		} else {
 			newlmi = incident.UniqueMessageID("AAA-001")
 		}
-		msg.SetOriginID(newlmi)
+		*msg.Base().FOriginMsgID = newlmi
 	}
 	// Does the message have any errors?
 	var canqueue = true
 	for _, f := range fields {
-		if f.Problem != "" {
+		if f.PresenceValid() != "" || f.EditValid(f) != "" {
 			canqueue = false
 			break
 		}
@@ -208,7 +206,7 @@ func editMessage(lmi string, env *envelope.Envelope, msg message.IEdit, startAt 
 	if newlmi != lmi {
 		if unique := incident.UniqueMessageID(newlmi); unique != newlmi {
 			newlmi = unique
-			msg.SetOriginID(newlmi)
+			*msg.Base().FOriginMsgID = newlmi
 		}
 		if lmi != "" {
 			incident.RemoveMessage(lmi)
@@ -223,7 +221,7 @@ func editMessage(lmi string, env *envelope.Envelope, msg message.IEdit, startAt 
 	return true
 }
 
-func startingField(fields []*message.EditField, startAt string) (idx int, field *message.EditField) {
+func startingField(fields []*message.Field, startAt string) (idx int, field *message.Field) {
 	var matches []int
 
 	if startAt == "" { // common case
@@ -232,6 +230,9 @@ func startingField(fields []*message.EditField, startAt string) (idx int, field 
 	// Look first for matches where all of the startAt characters correspond
 	// to word start letters in the field name.
 	for i, f := range fields {
+		if f.EditSkip(f) {
+			continue
+		}
 		if wordStartMatch(f.Label, startAt) {
 			matches = append(matches, i)
 		}
@@ -245,6 +246,9 @@ func startingField(fields []*message.EditField, startAt string) (idx int, field 
 	// Failing that, look for matches where the startAt characters
 	// correspond to any character in the field name.
 	for i, f := range fields {
+		if f.EditSkip(f) {
+			continue
+		}
 		if anyMatch(f.Label, startAt) {
 			matches = append(matches, i)
 		}
@@ -287,37 +291,48 @@ func anyMatch(have, want string) bool {
 	return want == ""
 }
 
+func editableField(field *message.Field, errorsOnly bool) bool {
+	if field.EditSkip(field) {
+		return false
+	}
+	return !errorsOnly || field.EditValid(field) != ""
+}
+
 var jnosMailboxRE = regexp.MustCompile(`(?i)^[A-Z][A-Z0-9]{0,5}$`)
 
-func applyToField(f *message.EditField, env *envelope.Envelope) {
-	addresses := strings.Split(f.Value, ",")
-	j := 0
-	f.Problem = ""
-	for _, address := range addresses {
-		if trim := strings.TrimSpace(address); trim != "" {
-			addresses[j], j = trim, j+1
-			if jnosMailboxRE.MatchString(address) {
-				// do nothing
-			} else if _, err := mail.ParseAddress(address); err == nil {
-				// do nothing
-			} else {
-				f.Problem = fmt.Sprintf(`The "To" field contains %q, which is not a valid JNOS mailbox name, BBS network address, or email address.`, address)
+func newToAddressField(to *[]string) (f *message.Field) {
+	var joined = strings.Join(*to, ", ")
+	return message.NewTextField(&message.Field{
+		Label:    "To",
+		Value:    &joined,
+		Presence: message.Required,
+		EditHelp: "This is the list of addresses to which the message is sent.  Each address must be a JNOS mailbox name, a BBS network address, or an email address.  The addresses must be separated by commas.  At least one address is required.",
+		EditApply: func(f *message.Field, s string) {
+			addresses := strings.Split(s, ",")
+			j := 0
+			for _, address := range addresses {
+				if trim := strings.TrimSpace(address); trim != "" {
+					addresses[j], j = trim, j+1
+				}
 			}
-		}
-	}
-	f.Value = strings.Join(addresses[:j], ", ")
-	env.To = addresses[:j]
-	if f.Value == "" {
-		f.Problem = `The "To" field is required.`
-	}
+			*f.Value = strings.Join(addresses[:j], ", ")
+			*to = addresses[:j]
+		},
+		EditValid: func(f *message.Field) string {
+			for _, address := range *to {
+				if jnosMailboxRE.MatchString(address) {
+					// do nothing
+				} else if _, err := mail.ParseAddress(address); err == nil {
+					// do nothing
+				} else {
+					return fmt.Sprintf(`The "To" field contains %q, which is not a valid JNOS mailbox name, BBS network address, or email address.`, address)
+				}
+			}
+			return ""
+		},
+	})
 }
 
-func min[T constraints.Ordered](a, b T) T {
-	if a < b {
-		return a
-	}
-	return b
-}
 func max[T constraints.Ordered](a, b T) T {
 	if a > b {
 		return a

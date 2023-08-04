@@ -187,7 +187,7 @@ Commands are:
     show       show a message
 `)
 	if inShell {
-		io.WriteString(os.Stdout, "    quit         quit the packet shell\nFor more information about a command, type \"help <command>\".\n")
+		io.WriteString(os.Stdout, "    quit       quit the packet shell\nFor more information about a command, type \"help <command>\".\n")
 	} else {
 		io.WriteString(os.Stdout, "For more information about a command, run \"packet help <command>\".\n")
 	}

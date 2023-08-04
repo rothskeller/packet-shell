@@ -17,7 +17,6 @@ import (
 	"github.com/rothskeller/packet/jnos/kpc3plus"
 	"github.com/rothskeller/packet/jnos/telnet"
 	"github.com/rothskeller/packet/message"
-	"github.com/rothskeller/packet/message/common"
 	"github.com/rothskeller/packet/xscmsg/delivrcpt"
 	"github.com/rothskeller/packet/xscmsg/readrcpt"
 )
@@ -188,7 +187,7 @@ func preConnectScan(sendlevel int, areas map[string]*bulletinConfig) (
 			// to be sent (but limit it to immediate messages only
 			// if that was requested).
 			if sendlevel == 2 {
-				if _, _, handling, _, _ := common.DecodeSubject(env.SubjectLine); handling != "I" {
+				if _, _, handling, _, _ := message.DecodeSubject(env.SubjectLine); handling != "I" {
 					return
 				}
 			}
@@ -303,9 +302,7 @@ func sendMessage(conn *jnos.Conn, list *lister, filename string, env *envelope.E
 		env.From = (&mail.Address{Name: config.OpName, Address: strings.ToLower(config.OpCall + "@" + config.BBS + ".ampr.org")}).String()
 	}
 	env.Date = time.Now()
-	if msg, ok := msg.(message.IUpdate); ok {
-		msg.UpdateSent(config.OpCall, config.OpName)
-	}
+	msg.SetOperator(config.OpCall, config.OpName, false)
 	body := msg.EncodeBody()
 	if strings.HasSuffix(filename, ".DR") {
 		fmt.Printf("\r\033[KSending delivery receipt for %s...", filename[:len(filename)-3])
@@ -399,13 +396,14 @@ func receiveMessage(conn *jnos.Conn, list *lister, area string, msgnum int, subj
 	// Assign a local message ID.  Put it, and the opcall/opname, into the
 	// message if it has fields for it.
 	lmi := incident.UniqueMessageID(config.MessageID)
-	if msg, ok := msg.(message.IUpdate); ok {
-		msg.UpdateReceived(lmi, config.OpCall, config.OpName)
+	if mb := msg.Base(); mb.FDestinationMsgID != nil {
+		*mb.FDestinationMsgID = lmi
 	}
+	msg.SetOperator(config.OpCall, config.OpName, true)
 	// Save the message.
 	var rmi string
-	if msg, ok := msg.(message.HumanMessage); ok {
-		rmi = msg.GetOriginID()
+	if b := msg.Base(); b.FOriginMsgID != nil {
+		rmi = *b.FOriginMsgID
 	}
 	if err = incident.SaveMessage(lmi, rmi, env, msg); err != nil {
 		fmt.Fprintf(os.Stderr, "\r\033[KERROR: %s\n", err)
@@ -472,8 +470,8 @@ func recordReceipt(list *lister, env *envelope.Envelope, msg message.Message, su
 	if env, msg, err = incident.ReadMessage(lmi); err != nil {
 		return false
 	}
-	if msg, ok := msg.(message.IUpdate); ok {
-		msg.UpdateDelivered(rmi)
+	if mb := msg.Base(); mb.FDestinationMsgID != nil {
+		*mb.FDestinationMsgID = rmi
 		if err = incident.SaveMessage(lmi, rmi, env, msg); err != nil {
 			fmt.Fprintf(os.Stderr, "\r\033[KERROR: %s\n", err)
 			return false
@@ -530,7 +528,7 @@ func immediateMessageNumbers(conn *jnos.Conn) (nums []int, ok bool) {
 		return nil, false
 	}
 	for _, li := range list.Messages {
-		if _, _, handling, _, _ := common.DecodeSubject(li.SubjectPrefix); handling == "I" {
+		if _, _, handling, _, _ := message.DecodeSubject(li.SubjectPrefix); handling == "I" {
 			nums = append(nums, li.Number)
 		}
 	}
@@ -619,7 +617,7 @@ func drainSigInt() {
 	for !done {
 		select {
 		case <-sigintch:
-			break
+			// no op
 		default:
 			done = true
 		}

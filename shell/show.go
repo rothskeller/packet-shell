@@ -64,16 +64,9 @@ queued message), the "show" command word can be omitted entirely.
 // showMessage displays a message in the requested format.  It returns true if
 // successful.
 func showMessage(lmi string, env *envelope.Envelope, msg message.Message, format string) bool {
-	if format == "" {
-		if _, ok := msg.(message.IRenderTable); ok {
-			format = "table"
-		} else {
-			format = "raw"
-		}
-	}
 	switch format {
-	case "table", "t":
-		return showAsTable(lmi, env, msg)
+	case "", "table", "t":
+		return showAsTable(lmi, env, msg.Base())
 	case "raw", "r":
 		showAsRaw(env, msg)
 		return true
@@ -93,49 +86,37 @@ func showAsRaw(env *envelope.Envelope, msg message.Message) {
 
 // showAsTable displays a message in a plain text tabular format.  It returns
 // true if successful.
-func showAsTable(lmi string, env *envelope.Envelope, msg message.Message) bool {
-	tmsg, ok := msg.(message.IRenderTable)
-	if !ok {
-		fmt.Fprintf(os.Stderr, "ERROR: %ss do not support table rendering\n", msg.Type().Name)
-		return false
-	}
-	var table []message.LabelValue
-	var name = msg.Type().Name
-	name = strings.ToUpper(name[:1]) + name[1:]
-	table = append(table, message.LabelValue{Label: "Message Type", Value: name})
+func showAsTable(lmi string, env *envelope.Envelope, msg *message.BaseMessage) bool {
+	var labels, values []string
+
+	labels = append(labels, "Message Type")
+	values = append(values, strings.ToUpper(msg.Type.Name[:1])+msg.Type.Name[1:])
 	if env.IsReceived() {
-		table = append(table, message.LabelValue{Label: "From", Value: env.From})
-		table = append(table, message.LabelValue{Label: "Sent", Value: env.Date.Format("01/02/2006 15:04")})
-		table = append(table, message.LabelValue{Label: "To", Value: strings.Join(env.To, ", ")})
-		table = append(table, message.LabelValue{Label: "Received", Value: fmt.Sprintf("%s as %s", env.ReceivedDate.Format("01/02/2006 15:04"), lmi)})
+		labels = append(labels, "From", "Sent", "To", "Received")
+		values = append(values, env.From, env.Date.Format("01/02/2006 15:04"), strings.Join(env.To, ", "),
+			fmt.Sprintf("%s as %s", env.ReceivedDate.Format("01/02/2006 15:04"), lmi))
 	} else {
-		table = append(table, message.LabelValue{Label: "To", Value: strings.Join(env.To, ", ")})
+		if len(env.To) != 0 {
+			labels, values = append(labels, "To"), append(values, strings.Join(env.To, ", "))
+		}
 		if !env.Date.IsZero() {
-			table = append(table, message.LabelValue{Label: "Sent", Value: env.Date.Format("01/02/2006 15:04")})
+			labels, values = append(labels, "Sent"), append(values, env.Date.Format("01/02/2006 15:04"))
 		}
 	}
-	table = append(table, tmsg.RenderTable()...)
-	var labellen int
-	for _, f := range table {
-		if f.Value == "" {
-			continue
+	for _, f := range msg.Fields {
+		if value := f.TableValue(f); f.Label != "" && value != "" {
+			labels, values = append(labels, f.Label), append(values, value)
 		}
-		if len(f.Label) > labellen {
-			labellen = len(f.Label)
+	}
+	var labellen int
+	for _, l := range labels {
+		if len(l) > labellen {
+			labellen = len(l)
 		}
 	}
 	e := editfield.NewEditor(labellen)
-	for _, f := range table {
-		if f.Value == "" {
-			continue
-		}
-		e.Display(f.Label, f.Value)
-		// value := strings.TrimRight(f.Value, "\n")
-		// if strings.IndexByte(value, '\n') < 0 && labellen+2+len(value) < 80 {
-		// 	fmt.Printf("\033[2m%-*s\033[0m  %s\n", labellen, f.Label, value)
-		// } else {
-		// 	fmt.Printf("\033[2m%s\033[0m\n    %s\n", f.Label, strings.Replace(value, "\n", "\n    ", -1))
-		// }
+	for i, l := range labels {
+		e.Display(l, values[i])
 	}
 	return true
 }
@@ -162,13 +143,8 @@ func showAsPDF(lmi string) bool {
 		if _, msg, err = incident.ReadMessage(lmi); err != nil {
 			return false
 		}
-		if pmsg, ok := msg.(message.IRenderPDF); ok {
-			if err = pmsg.RenderPDF(lmi + ".pdf"); err != nil {
-				fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
-				return false
-			}
-		} else {
-			fmt.Fprintf(os.Stderr, "ERROR: no PDF rendering support for %ss\n", msg.Type().Name)
+		if err = msg.RenderPDF(lmi + ".pdf"); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
 			return false
 		}
 	}

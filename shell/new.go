@@ -12,14 +12,13 @@ import (
 	"github.com/rothskeller/packet/message"
 	"github.com/rothskeller/packet/xscmsg/checkin"
 	"github.com/rothskeller/packet/xscmsg/checkout"
-	"github.com/rothskeller/packet/xscmsg/ics213"
 )
 
 // cmdNew implements the new command.
 func cmdNew(args []string) bool {
 	var (
 		tag string
-		msg message.IEdit
+		msg message.Message
 	)
 	// Check arguments.  For convenience, aliases are available for the
 	// Check-In and Check-Out message types, which would otherwise have to
@@ -41,8 +40,8 @@ func cmdNew(args []string) bool {
 		return false
 	}
 	// If the message has a default body field, put the default text in it.
-	if msg, ok := msg.(message.ISetBody); ok {
-		msg.SetBody(config.DefBody)
+	if mb := msg.Base(); mb.FBody != nil {
+		*mb.FBody = config.DefBody
 	}
 	return newAndReply(new(envelope.Envelope), msg)
 }
@@ -60,7 +59,7 @@ func helpNew() {
 	var tags = make([]string, 0, len(message.RegisteredTypes))
 	var taglen int
 	for tag := range message.RegisteredTypes {
-		if _, ok := message.Create(tag).(message.IEdit); !ok {
+		if msg := message.Create(tag); msg == nil || !msg.Editable() {
 			continue
 		}
 		tags = append(tags, tag)
@@ -91,7 +90,7 @@ func cmdReply(args []string) bool {
 		renv   *envelope.Envelope
 		rmsg   message.Message
 		senv   envelope.Envelope
-		smsg   message.IEdit
+		smsg   message.Message
 		err    error
 	)
 	// Parse arguments.
@@ -132,36 +131,30 @@ func cmdReply(args []string) bool {
 		if smsg = msgForTag(tag); smsg == nil {
 			return false
 		}
-	} else if _, ok := rmsg.(message.IEdit); ok {
-		smsg = message.Create(rmsg.Type().Tag).(message.IEdit)
+	} else if rmsg.Editable() {
+		smsg = message.Create(rmsg.Base().Type.Tag)
 	} else {
 		fmt.Fprintf(os.Stderr, "ERROR: can't create %s %s; specify some other message type\n",
-			rmsg.Type().Article, rmsg.Type().Name)
+			rmsg.Base().Type.Article, rmsg.Base().Type.Name)
 		return false
 	}
 	// If the message has a default body field, put the default text in it.
 	// (We may overwrite this below if the received message has a body.)
-	if smsg, ok := smsg.(message.ISetBody); ok {
-		smsg.SetBody(config.DefBody)
+	if sb := smsg.Base(); sb.FBody != nil {
+		*sb.FBody = config.DefBody
 	}
 	// Copy over the data from the received message to the reply.
-	if rmsg, ok := rmsg.(message.HumanMessage); ok {
-		if smsg, ok := smsg.(message.HumanMessage); ok {
-			smsg.SetHandling(rmsg.GetHandling())
-		}
-		if smsg, ok := smsg.(message.ISetSubject); ok {
-			smsg.SetSubject(rmsg.GetSubject())
-		}
-		if smsg, ok := smsg.(*ics213.ICS213); ok {
-			smsg.Reference = rmsg.GetOriginID()
-		}
+	if rb, sb := rmsg.Base(), smsg.Base(); rb.FHandling != nil && sb.FHandling != nil {
+		*sb.FHandling = *rb.FHandling
 	}
-	if rmsg, ok := rmsg.(message.IGetBody); ok {
-		if smsg, ok := smsg.(message.ISetBody); ok {
-			if body := rmsg.GetBody(); body != "" {
-				smsg.SetBody(rmsg.GetBody())
-			}
-		}
+	if rb, sb := rmsg.Base(), smsg.Base(); rb.FSubject != nil && sb.FSubject != nil {
+		*sb.FSubject = *rb.FSubject
+	}
+	if rb, sb := rmsg.Base(), smsg.Base(); rb.FOriginMsgID != nil && sb.FReference != nil {
+		*sb.FReference = *rb.FOriginMsgID
+	}
+	if rb, sb := rmsg.Base(), smsg.Base(); rb.FBody != nil && *rb.FBody != "" && sb.FBody != nil {
+		*sb.FBody = *rb.FBody
 	}
 	return newAndReply(&senv, smsg)
 }
@@ -186,12 +179,12 @@ message ID of the received message.
 
 // msgForTag returns a created message of the type specified by the tag.  It
 // returns nil if the tag is invalid.
-func msgForTag(tag string) (msg message.IEdit) {
+func msgForTag(tag string) (msg message.Message) {
 	for rt := range message.RegisteredTypes {
 		if len(rt) < len(tag) || !strings.EqualFold(tag, rt[:len(tag)]) {
 			continue
 		}
-		if m, ok := message.Create(rt).(message.IEdit); !ok {
+		if m := message.Create(rt); m == nil || !m.Editable() {
 			continue
 		} else if msg != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: message type %q is ambiguous\n", tag)
@@ -207,12 +200,12 @@ func msgForTag(tag string) (msg message.IEdit) {
 }
 
 // newAndReply is the common code shared by new and reply.
-func newAndReply(env *envelope.Envelope, msg message.IEdit) bool {
+func newAndReply(env *envelope.Envelope, msg message.Message) bool {
 	// If we have a message ID pattern, give the new message an ID.
 	// Otherwise we'll leave it blank and the editor will force the user to
 	// provide one.
 	if config.MessageID != "" {
-		msg.SetOriginID(incident.UniqueMessageID(config.MessageID))
+		*msg.Base().FOriginMsgID = incident.UniqueMessageID(config.MessageID)
 	}
 	// Special case for check-in and check-out messages: fill in the call
 	// signs and names from the incident/activation settings.  If we don't
@@ -236,7 +229,7 @@ func newAndReply(env *envelope.Envelope, msg message.IEdit) bool {
 	// settings yet, use the Origin Message ID of the new message as our
 	// model going forward.
 	if config.MessageID == "" {
-		setSetting([]string{"msgid", msg.GetOriginID()})
+		setSetting([]string{"msgid", *msg.Base().FOriginMsgID})
 	}
 	// If this was a check-in message, and we don't already have operator
 	// and tactical information in the incident/activation settings, store

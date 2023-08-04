@@ -9,7 +9,7 @@ import (
 
 	"github.com/rothskeller/packet/envelope"
 	"github.com/rothskeller/packet/incident"
-	"github.com/rothskeller/packet/message/common"
+	"github.com/rothskeller/packet/message"
 	"golang.org/x/term"
 )
 
@@ -80,7 +80,7 @@ func (l *lister) item(lmi, rmi string, env *envelope.Envelope, hasDR bool) {
 	if env.ReceivedArea != "" {
 		color = "\033[38;5;14m" // cyan
 	} else {
-		_, _, handling, _, _ := common.DecodeSubject(env.SubjectLine)
+		_, _, handling, _, _ := message.DecodeSubject(env.SubjectLine)
 		if handling == "I" {
 			color = "\033[38;5;202m" // red
 		} else if handling == "P" {

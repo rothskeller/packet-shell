@@ -250,7 +250,6 @@ func setSetting(args []string) bool {
 		switch len(args) {
 		case 0:
 			config.OpStartDate, config.OpStartTime, config.OpEndDate, config.OpEndTime = "", "", "", ""
-			break
 		case 3:
 			sd, st, ed, et = args[0], args[1], args[0], args[2]
 		case 4:
