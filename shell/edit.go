@@ -120,6 +120,7 @@ func editMessage(lmi string, env *envelope.Envelope, msg message.IEdit, startAt 
 		Width: 80,
 		Help:  "This is the list of addresses to which the message is sent.  Each address must be a JNOS mailbox name, a BBS network address, or an email address.  The addresses must be separated by commas.  At least one address is required.",
 	}
+	applyToField(fields[0], env) // set initial Problem
 	// Find the longest field label.
 	for _, f := range fields {
 		labelWidth = max(labelWidth, len(f.Label))
