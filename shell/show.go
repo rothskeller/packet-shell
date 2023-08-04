@@ -100,6 +100,9 @@ func showAsTable(lmi string, env *envelope.Envelope, msg message.Message) bool {
 		return false
 	}
 	var table []message.LabelValue
+	var name = msg.Type().Name
+	name = strings.ToUpper(name[:1]) + name[1:]
+	table = append(table, message.LabelValue{Label: "Message Type", Value: name})
 	if env.IsReceived() {
 		table = append(table, message.LabelValue{Label: "From", Value: env.From})
 		table = append(table, message.LabelValue{Label: "Sent", Value: env.Date.Format("01/02/2006 15:04")})
