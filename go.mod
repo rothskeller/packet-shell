@@ -3,7 +3,7 @@ module github.com/rothskeller/packet-cmd
 go 1.20
 
 require (
-	github.com/rothskeller/packet v1.5.0
+	github.com/rothskeller/packet v1.6.0
 	golang.org/x/exp v0.0.0-20230725093048-515e97ebf090
 	golang.org/x/term v0.10.0
 )
