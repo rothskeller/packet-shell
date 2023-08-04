@@ -2,10 +2,10 @@ package main
 
 import (
 	"github.com/rothskeller/packet-cmd/shell"
-	"github.com/rothskeller/packet/xscmsg/allmsg"
+	"github.com/rothskeller/packet/xscmsg"
 )
 
 func main() {
-	allmsg.Register()
+	xscmsg.Register()
 	shell.Main()
 }
