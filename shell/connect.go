@@ -486,15 +486,16 @@ func recordReceipt(list *lister, env *envelope.Envelope, msg message.Message, su
 func sendDeliveryReceipt(conn *jnos.Conn, list *lister, lmi string, renv *envelope.Envelope) bool {
 	var (
 		denv envelope.Envelope
-		dr   delivrcpt.DeliveryReceipt
+		dr   *delivrcpt.DeliveryReceipt
 	)
+	dr = delivrcpt.New()
 	dr.LocalMessageID = lmi
 	dr.DeliveredTime = time.Now().Format("01/02/2006 15:04")
 	dr.MessageSubject = renv.SubjectLine
 	dr.MessageTo = strings.Join(renv.To, ", ")
 	denv.SubjectLine = dr.EncodeSubject()
 	denv.To = []string{renv.From}
-	return sendMessage(conn, list, lmi+".DR", &denv, &dr)
+	return sendMessage(conn, list, lmi+".DR", &denv, dr)
 }
 
 func receiveImmediates(conn *jnos.Conn, list *lister) bool {
