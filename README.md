@@ -16,6 +16,7 @@ executable.  Available commands include:
     packet quit       quit the packet shell
     packet receive    connect and receive incoming messages (no send)
     packet reply      create a new reply to a received message
+    packet resend     create a new draft copy of a sent message
     packet send       connect and send queued messages (no receive)
     packet set        set incident/activation and connection parameters
     packet show       show a message

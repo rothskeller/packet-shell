@@ -160,8 +160,7 @@ func cmdReply(args []string) bool {
 }
 
 func helpReply() {
-	io.WriteString(os.Stdout, `
-The "reply" command starts a reply message.
+	io.WriteString(os.Stdout, `The "reply" command starts a reply message.
     usage: packet reply <message-id> [<message-type>]
 The "reply" command creates a new draft message with the same handling order
 and subject as the received message identified by <message-id>.  The reply's
@@ -173,6 +172,55 @@ message types.)
 ICS-213), its body is copied into the reply message.
     If the reply message type has a "Reference" field, it is set to the origin
 message ID of the received message.
+    The new message is opened in an editor; run "help edit" for details.
+`)
+}
+
+func cmdResend(args []string) bool {
+	var (
+		env *envelope.Envelope
+		msg message.Message
+		err error
+	)
+	// Parse arguments.
+	if len(args) != 1 {
+		fmt.Fprintf(os.Stderr, "usage: packet resend <message-id>\n")
+		return false
+	}
+	// Find the outgoing message we're resending.
+	switch lmis := expandMessageID(args[0], true); len(lmis) {
+	case 0:
+		fmt.Fprintf(os.Stderr, "ERROR: no such message %q\n", args[0])
+		return false
+	case 1:
+		if env, msg, err = incident.ReadMessage(lmis[0]); err != nil {
+			return false
+		}
+		if env.IsReceived() {
+			fmt.Fprintf(os.Stderr, "ERROR: message %s is not a outgoing message\n", lmis[0])
+			return false
+		}
+		if !msg.Editable() {
+			fmt.Fprintf(os.Stderr, "ERROR: %ss are not editable\n", msg.Base().Type.Name)
+			return false
+		}
+	default:
+		fmt.Fprintf(os.Stderr, "ERROR: %q is ambiguous (%s)\n", args[0], strings.Join(lmis, ", "))
+		return false
+	}
+	// Give the message a new number, and mark it as a draft.
+	env.ReadyToSend = false
+	if mb := msg.Base(); mb.FOriginMsgID != nil {
+		*mb.FOriginMsgID = ""
+	}
+	return newAndReply(env, msg)
+}
+
+func helpResend() {
+	io.WriteString(os.Stdout, `The "resend" command creates a new, draft message as a copy of a sent message.
+    usage: packet resend <message-id>
+The "resend" command creates a new draft message with the same content as the
+existing outgoing message identified by <message-id>.
     The new message is opened in an editor; run "help edit" for details.
 `)
 }

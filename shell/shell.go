@@ -29,7 +29,7 @@ func Main() {
 		}
 		return
 	}
-	io.WriteString(os.Stdout, "\033[1mPacket Shell v0.1 by Steve Roth KC6RSC.  Type \"help\" for help.\n")
+	io.WriteString(os.Stdout, "\033[1mPacket Shell v1.6.1 by Steve Roth KC6RSC.  Type \"help\" for help.\n")
 	input = bufio.NewScanner(os.Stdin)
 	for {
 		io.WriteString(os.Stdout, "\033[1mpacket>\033[0m ")
@@ -80,6 +80,8 @@ func runCommand(args []string, inShell bool) (ok, quit bool) {
 		ok = cmdConnect(args[1:], 0, 1)
 	case "reply":
 		ok = cmdReply(args[1:])
+	case "resend":
+		ok = cmdResend(args[1:])
 	case "ri":
 		ok = cmdConnect(args[1:], 0, 2)
 	case "s", "send":
@@ -150,6 +152,8 @@ func cmdHelp(args []string, inShell bool) bool {
 			helpQueue()
 		case "reply":
 			helpReply()
+		case "resend":
+			helpResend()
 		case "set":
 			helpSet()
 		case "show", "pdf":
