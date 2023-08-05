@@ -159,7 +159,7 @@ func saveConfig() {
 	}
 }
 
-func cmdSet(args []string) bool {
+func cmdConfigure(args []string) bool {
 	switch len(args) {
 	case 0:
 		showAllSettings()
@@ -394,9 +394,11 @@ func setSetting(args []string) bool {
 	return true
 }
 
-func helpSet() {
-	io.WriteString(os.Stdout, `The "set" command sets incident/activation configuration settings.
-    usage: packet set [<name> [=] [<value>]]
+func helpConfigure() {
+	io.WriteString(os.Stdout, `
+The "configure" (or "conf" or "config") command sets incident/activation
+configuration settings.
+    usage: packet configure [<name> [=] [<value>]]
 With no arguments, it displays the values of all configuration settings.
 With only a setting name, it displays the value of that setting.
 With a name and value, it sets that setting to that value.
@@ -468,7 +470,7 @@ func requestConfig(vars ...string) bool {
 			continue // it's already set
 		}
 		for {
-			fmt.Printf("set %-10s = ", name)
+			fmt.Printf("configure %-10s = ", name)
 			if !scan.Scan() {
 				return false
 			}

@@ -87,7 +87,7 @@ func runCommand(args []string, inShell bool) (ok, quit bool) {
 	case "s", "send":
 		ok = cmdConnect(args[1:], 1, 0)
 	case "set":
-		ok = cmdSet(args[1:])
+		ok = cmdConfigure(args[1:])
 	case "show":
 		ok = cmdShow(args[1:], "")
 	case "si":
@@ -155,7 +155,7 @@ func cmdHelp(args []string, inShell bool) bool {
 		case "resend":
 			helpResend()
 		case "set":
-			helpSet()
+			helpConfigure()
 		case "show", "pdf":
 			helpShow()
 		case "help", "h", "?", "--help", "quit", "q":
@@ -175,6 +175,7 @@ func helpTop(inShell bool) {
 	io.WriteString(os.Stdout, `usage: packet [<command>]
 Commands are:
     bulletins  schedule and perform bulletin checks
+    configure  set incident/activation and connection parameters
     connect    connect, send queued messages, and receive messages
     delete     delete an unsent message completely
     draft      remove an unsent message from the send queue
@@ -187,7 +188,6 @@ Commands are:
     receive    connect and receive incoming messages (no send)
     reply      create a new reply to a received message
     send       connect and send queued messages (no receive)
-    set        set incident/activation and connection parameters
     show       show a message
 `)
 	if inShell {

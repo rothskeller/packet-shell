@@ -4,6 +4,7 @@ The packet shell combines a number of packet related commands into a single
 executable.  Available commands include:
 
     packet bulletins  schedule and perform bulletin checks
+    packet configure  set incident/activation and connection parameters
     packet connect    connect, send queued messages, and receive messages
     packet delete     delete an unsent message completely
     packet draft      remove an unsent message from the send queue
@@ -18,7 +19,6 @@ executable.  Available commands include:
     packet reply      create a new reply to a received message
     packet resend     create a new draft copy of a sent message
     packet send       connect and send queued messages (no receive)
-    packet set        set incident/activation and connection parameters
     packet show       show a message
 
 Running the `packet` command with no arguments starts a shell, in which multiple
@@ -35,12 +35,13 @@ If the “command” listed after the word `packet` is a message ID of an existi
 message, a default command is invoked on that message.  The default command is
 `edit` for unsent outgoing messages and `show` for all other messages.
 
-## Set Command
+## Configure Command
 
-The `set` command displays or sets the value of settings for the incident or
-activation (i.e., all invocations of `packet` in the same working directory).
+The `configure` (or `conf` or `config`) command displays or sets the value of
+settings for the incident or activation (i.e., all invocations of `packet` in
+the same working directory).
 
-    usage: packet set [«name» [=] [«value»]]
+    usage: packet configure [«name» [=] [«value»]]
 
 With no arguments, it displays the values of all settings.  With only a setting
 name, it displays the value of that setting.  With a name and value, it sets
@@ -208,9 +209,9 @@ abbreviated form, the `i` keyword can be combined with the command word, so
 `si`, `ri`, `ci`, `sri`, and `rsi` are all valid commands.
 
 When receiving messages, the `connect` command automatically assigns the local
-message ID based on the `msgid` setting (see “Set” above), and it fills in
-operator name and call sign fields of forms messages with the `operator`
-setting.
+message ID based on the `msgid` setting (see “Configure Command” above), and it
+fills in operator name and call sign fields of forms messages with the
+`operator` setting.
 
 ## Bulletins Command
 
@@ -305,10 +306,10 @@ Delivery and read receipts are stored in files named with the local message ID
 and `.DR.txt` or `.RR.txt` extensions, respectively.  No symbolic links with
 remote message IDs are created for them.
 
-Settings for the incident or activation (see “Set Command” above) are stored in
-the file `packet.conf`, in JSON format.  Some settings that are likely to be
-the same for all incidents are also stored in `$HOME/.packet` and used to seed
-the settings for new incidents.
+Settings for the incident or activation (see “Configure Command” above) are
+stored in the file `packet.conf`, in JSON format.  Some settings that are likely
+to be the same for all incidents are also stored in `$HOME/.packet` and used to
+seed the settings for new incidents.
 
 If an ICS-309 form has been generated, it is stored in CSV format in
 `ics309.csv`, and in PDF format in `ics309.pdf`.  No ICS-309 forms are generated
