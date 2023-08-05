@@ -45,6 +45,8 @@ func cmdQueue(args []string) bool {
 			return false
 		}
 	}
+	var l = lister{seenOne: true}
+	l.item(args[0], "", env, false)
 	return true
 }
 
@@ -86,6 +88,8 @@ func cmdDraft(args []string) bool {
 			return false
 		}
 	}
+	var l = lister{seenOne: true}
+	l.item(args[0], "", env, false)
 	return true
 }
 
@@ -113,6 +117,7 @@ func cmdDelete(args []string) bool {
 		return false
 	}
 	incident.RemoveMessage(args[0])
+	fmt.Printf("%s deleted.\n", args[0])
 	return true
 }
 

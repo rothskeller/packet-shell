@@ -218,6 +218,9 @@ func editMessage(lmi string, env *envelope.Envelope, msg message.Message, startA
 		fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
 		return false
 	}
+	// Display the result.
+	var l = lister{seenOne: true}
+	l.item(lmi, "", env, false)
 	return true
 }
 
