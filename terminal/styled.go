@@ -17,6 +17,23 @@ import (
 	"golang.org/x/term"
 )
 
+const (
+	colorNormal    = 16*256 + 254  // light grey on black
+	colorLabel     = 16*256 + 51   // cyan on black
+	colorError     = 16*256 + 202  // red on black
+	colorBulletin  = 16*256 + 51   // cyan on black
+	colorImmediate = 16*256 + 202  // red on black
+	colorPriority  = 16*256 + 226  // yellow on black
+	colorWhite     = 16*256 + 231  // bright white on black
+	colorAlertBG   = 196*256 + 231 // white on red
+	colorWarningBG = 226*256 + 16  // black on yellow
+	colorSuccessBG = 28*256 + 231  // white on green
+	colorEntry     = 238*256 + 231 // white on gray
+	colorSelected  = 254*256 + 16  // black on light grey
+	colorHelp      = 30*256 + 254  // light grey on dark green
+	colorHint      = 16*256 + 250  // grey on black
+)
+
 // Key codes used in this program.  This isn't all possible key codes, but it's
 // the ones that are relevant to us.
 const (
@@ -41,6 +58,16 @@ const (
 	keyBackTab
 )
 
+type styled struct {
+	width        int
+	lastColor    int
+	listItemSeen bool
+	haveStatus   bool
+	x, y         int
+	hideCursor   bool
+	buf          *screenBuf
+}
+
 func newStyled() (t *styled) {
 	t = new(styled)
 	if w, _, _ := term.GetSize(int(os.Stdout.Fd())); w > 0 {
@@ -50,13 +77,12 @@ func newStyled() (t *styled) {
 	} else {
 		t.width = 80
 	}
-	t.state = t.makeRaw()
 	return t
 }
 
 func (*styled) Human() bool { return true }
 
-func (t *styled) Close() { t.restore(t.state) }
+func (t *styled) Close() { cookedMode() }
 
 func (t *styled) Confirm(f string, args ...any) {
 	var s = fmt.Sprintf(f, args...)
@@ -250,6 +276,8 @@ func (t *styled) EditField(f *message.Field, labelWidth int) (result EditResult,
 		e         editor
 		restarted bool
 	)
+	rawMode()
+	defer cookedMode()
 RESTART:
 	e = editor{
 		term: t, field: f,

@@ -15,10 +15,12 @@ func (t *styled) ReadCommand() (line string, err error) {
 		historyIndex = len(history)
 	)
 	history = append(history, "")
+	rawMode()
 	t.clearToEOS()
 	defer func() {
 		t.move(0, 0)
 		t.clearToEOS()
+		cookedMode()
 	}()
 	for {
 		var buf = newScreenBuf(t.width - 1)

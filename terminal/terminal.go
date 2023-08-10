@@ -4,40 +4,11 @@
 package terminal
 
 import (
-	"os"
 	"time"
 
 	"github.com/rothskeller/packet/message"
-	"golang.org/x/term"
+	"github.com/spf13/cobra"
 )
-
-const (
-	colorNormal    = 16*256 + 254  // light grey on black
-	colorLabel     = 16*256 + 51   // cyan on black
-	colorError     = 16*256 + 202  // red on black
-	colorBulletin  = 16*256 + 51   // cyan on black
-	colorImmediate = 16*256 + 202  // red on black
-	colorPriority  = 16*256 + 226  // yellow on black
-	colorWhite     = 16*256 + 231  // bright white on black
-	colorAlertBG   = 196*256 + 231 // white on red
-	colorWarningBG = 226*256 + 16  // black on yellow
-	colorSuccessBG = 28*256 + 231  // white on green
-	colorEntry     = 238*256 + 231 // white on gray
-	colorSelected  = 254*256 + 16  // black on light grey
-	colorHelp      = 30*256 + 254  // light grey on dark green
-	colorHint      = 16*256 + 250  // grey on black
-)
-
-type ListItem struct {
-	Handling string // "I", "P", "R", "B" for bulletin
-	Flag     string // "DRAFT", "QUEUE", "NO RCPT", "HAVE RCPT"
-	Time     time.Time
-	From     string
-	LMI      string
-	To       string
-	Subject  string
-	NoHeader bool
-}
 
 type Terminal interface {
 	// Human returns whether output should be formatted for humans.
@@ -77,16 +48,15 @@ type Terminal interface {
 	Close()
 }
 
-type TableWriter interface {
-	// Row takes a set of column color, column value pairs.  There must be
-	// the same number of columns as were passed to NewTable.  The column
-	// color is bg*256+fg, where bg and fg are between 16 and 255 as
-	// understood in ANSI escape codes.  bg and/or fg can also be 0 meaning
-	// "terminal's default".
-	Row(...any)
-	// Close closes the table, and writes the provided message if no table
-	// rows were emitted.
-	Close(none string)
+type ListItem struct {
+	Handling string // "I", "P", "R", "B" for bulletin
+	Flag     string // "DRAFT", "QUEUE", "NO RCPT", "HAVE RCPT"
+	Time     time.Time
+	From     string
+	LMI      string
+	To       string
+	Subject  string
+	NoHeader bool
 }
 
 // EditResult is the result of an EditField operation.
@@ -106,23 +76,24 @@ const (
 	ResultDone EditResult = '\033'
 )
 
-// Init initializes the term subsystem; it must be called before any other
-// term.* method.  The human and batch flags come from the command line --human
-// and --batch arguments.
-func Init(human, batch bool) (t Terminal) {
-	// We have four basic possibilities:
-	// 1.  Batch mode: intended for scripted use.  Minimalist, predictable
-	//     output.  CSV formatting of tables.
-	// 2.  Plain mode: human use, but on a terminal that doesn't support
-	//     styling.  Aligned and padded tables.
-	// 3.  ANSI terminal: human use, on a terminal that accepts ANSI codes.
-	// 4.  Windows terminal: human use, in a Windows console window.
-	// Each of the four is implemented by a different termhandler.
-	if !batch && term.IsTerminal(int(os.Stdout.Fd())) && term.IsTerminal(int(os.Stdin.Fd())) {
+// New returns a Terminal implementation appropriate for the requested input/
+// output mode (--script or --no-script) and attached devices (terminal or not).
+func New(cmd *cobra.Command) (t Terminal) {
+	// If they asked for script mode, give it to them.
+	if script, _ := cmd.Flags().GetBool("script"); script {
+		return newBatch()
+	}
+	// If they asked for no-script mode, give it to them.
+	if noscript, _ := cmd.Flags().GetBool("no-script"); noscript {
+		if isTerminal {
+			return newStyled()
+		} else {
+			return newPlain()
+		}
+	}
+	// They didn't ask, so decide based on terminal type.
+	if isTerminal {
 		return newStyled()
-		// Whether this is ANSI or Windows depends on the build.
-	} else if human {
-		return newPlain()
 	} else {
 		return newBatch()
 	}
@@ -130,6 +101,8 @@ func Init(human, batch bool) (t Terminal) {
 
 var spaces = "                                                                                                                                                                                                                                                                                                            "
 
+// setLength returns the input string, truncated or right-padded to be exactly
+// the requested length.
 func setLength(s string, l int) string {
 	if l < 0 {
 		return s
@@ -140,6 +113,8 @@ func setLength(s string, l int) string {
 	return s[:l]
 }
 
+// setMaxLength returns the input string, truncated if necessary to be no longer
+// than the requested length.
 func setMaxLength(s string, l int) string {
 	if l < 0 {
 		return s

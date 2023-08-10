@@ -8,28 +8,33 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-type state uint64
+var isTerminal bool
+var initialState uint32
 
-func (t *styled) makeRaw() state {
-	var ist, ost uint32
-	if err := windows.GetConsoleMode(windows.Handle(int(os.Stdin.Fd())), &ist); err != nil {
-		return 0
+func init() {
+	isTerminal = true
+	if err := windows.GetConsoleMode(windows.Handle(int(os.Stdin.Fd())), &initialState); err != nil {
+		isTerminal = false
+		return
 	}
-	if err := windows.GetConsoleMode(windows.Handle(int(os.Stdout.Fd())), &ost); err != nil {
-		return 0
+	var ostate uint32
+	if err := windows.GetConsoleMode(windows.Handle(int(os.Stdout.Fd())), &ostate); err != nil {
+		isTerminal = false
+		return
 	}
-	const iraw = 0x0200 /* ENABLE_VIRTUAL_TERMINAL_INPUT */
-	if err := windows.SetConsoleMode(windows.Handle(int(os.Stdin.Fd())), iraw); err != nil {
-		return 0
+	ostate |= 0x0004 // ENABLE_VIRTUAL_TERMINAL_PROCESSING
+	ostate |= 0x0001 // ENABLE_PROCESSED_OUTPUT
+	if err := windows.SetConsoleMode(windows.Handle(int(os.Stdout.Fd())), ostate); err != nil {
+		isTerminal = false
 	}
-	const oraw = 0x0004 /* ENABLE_VIRTUAL_TERMINAL_PROCESSING */ | 0x0001 /* ENABLE_PROCESSED_OUTPUT */
-	if err := windows.SetConsoleMode(windows.Handle(int(os.Stdout.Fd())), oraw); err != nil {
-		return 0
-	}
-	return state(ist)<<32 + state(ost)
 }
 
-func (t *styled) restore(st state) {
-	windows.SetConsoleMode(windows.Handle(int(os.Stdin.Fd())), uint32(st>>32))
-	windows.SetConsoleMode(windows.Handle(int(os.Stdout.Fd())), uint32(st&0xFFFFFFFF))
+func rawMode() {
+	if isTerminal() {
+		windows.SetConsoleMode(windows.Handle(int(os.Stdin.Fd())), 0x0200) // ENABLE_VIRTUAL_TERMINAL_INPUT
+	}
+}
+
+func cookedMode() {
+	windows.SetConsoleMode(windows.Handle(int(os.Stdin.Fd())), initialStateI)
 }

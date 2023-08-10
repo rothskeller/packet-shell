@@ -7,17 +7,6 @@ import (
 	"strings"
 )
 
-type styled struct {
-	state        state
-	width        int
-	lastColor    int
-	listItemSeen bool
-	haveStatus   bool
-	x, y         int
-	hideCursor   bool
-	buf          *screenBuf
-}
-
 func (t *styled) print(color int, s string) {
 	t.setColor(color)
 	for idx := strings.IndexByte(s, '\n'); idx >= 0; idx = strings.IndexByte(s, '\n') {

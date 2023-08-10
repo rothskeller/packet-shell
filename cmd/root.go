@@ -33,7 +33,6 @@ func init() {
 				line string
 				args []string
 			)
-
 			if line, err = term.ReadCommand(); err != nil {
 				if err == io.EOF {
 					line = "quit"
@@ -43,6 +42,7 @@ func init() {
 			}
 			args = tokenizeLine(line)
 			rootCmd.SetArgs(args)
+			saveTerm = term
 			if err = rootCmd.Execute(); err != nil && err != ErrQuit {
 				term.Error(err.Error())
 			}
@@ -71,9 +71,7 @@ running multiple commands without the "packet" prefix on each.
 		if term != nil {
 			saveTerm = term
 		}
-		script, _ := cmd.Flags().GetBool("script")
-		noscript, _ := cmd.Flags().GetBool("no-script")
-		term = terminal.Init(noscript, script)
+		term = terminal.New(cmd)
 	},
 }
 
