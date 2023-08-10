@@ -2,24 +2,18 @@ package terminal
 
 import (
 	"errors"
-	"os"
-
-	"golang.org/x/term"
 )
 
 var history []string
 
 func (t *styled) ReadCommand() (line string, err error) {
 	var (
-		state        *term.State
 		cursor       int
 		scroll       int
 		selstart     int
 		selend       int
 		historyIndex = len(history)
 	)
-	state, _ = term.MakeRaw(int(os.Stdin.Fd()))
-	defer term.Restore(int(os.Stdin.Fd()), state)
 	history = append(history, "")
 	t.clearToEOS()
 	defer func() {

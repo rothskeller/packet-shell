@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -13,7 +14,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var term terminal.Terminal
+var term, saveTerm terminal.Terminal
+
+var ErrQuit = errors.New("quit requested")
 
 func init() {
 	rootCmd.PersistentFlags().Bool("script", false, "script-friendly input and output")
@@ -40,8 +43,13 @@ func init() {
 			}
 			args = tokenizeLine(line)
 			rootCmd.SetArgs(args)
-			if err = rootCmd.Execute(); err != nil {
+			if err = rootCmd.Execute(); err != nil && err != ErrQuit {
 				term.Error(err.Error())
+			}
+			term.Close()
+			term, saveTerm = saveTerm, nil
+			if err == ErrQuit {
+				return nil
 			}
 		}
 	}
@@ -60,15 +68,20 @@ running multiple commands without the "packet" prefix on each.
 	SilenceErrors:     true,
 	SilenceUsage:      true,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if term != nil {
+			saveTerm = term
+		}
 		script, _ := cmd.Flags().GetBool("script")
 		noscript, _ := cmd.Flags().GetBool("no-script")
 		term = terminal.Init(noscript, script)
 	},
 }
 
-func Execute(args []string) error {
+func Execute(args []string) (err error) {
 	rootCmd.SetArgs(args)
-	return rootCmd.Execute()
+	err = rootCmd.Execute()
+	term.Close()
+	return err
 }
 
 // expandMessageID searches all messages in the current directory for those

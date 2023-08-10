@@ -25,6 +25,8 @@ func newBatch() *batch {
 
 func (*batch) Human() bool { return false }
 
+func (*batch) Close() {}
+
 func (t *batch) Confirm(string, ...any) {
 	// We don't print confirmations in batch mode.
 }

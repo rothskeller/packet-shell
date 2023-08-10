@@ -32,6 +32,8 @@ func newPlain() (t *plain) {
 
 func (*plain) Human() bool { return true }
 
+func (*plain) Close() {}
+
 func (t *plain) Confirm(f string, args ...any) {
 	var s = fmt.Sprintf(f, args...)
 	if !strings.HasSuffix(s, "\n") {

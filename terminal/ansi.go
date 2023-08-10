@@ -1,5 +1,3 @@
-//go:build !windows
-
 package terminal
 
 import (
@@ -10,6 +8,7 @@ import (
 )
 
 type styled struct {
+	state        state
 	width        int
 	lastColor    int
 	listItemSeen bool

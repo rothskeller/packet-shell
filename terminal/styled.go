@@ -50,10 +50,13 @@ func newStyled() (t *styled) {
 	} else {
 		t.width = 80
 	}
+	t.state = t.makeRaw()
 	return t
 }
 
 func (*styled) Human() bool { return true }
+
+func (t *styled) Close() { t.restore(t.state) }
 
 func (t *styled) Confirm(f string, args ...any) {
 	var s = fmt.Sprintf(f, args...)
@@ -243,13 +246,10 @@ type editor struct {
 
 func (t *styled) EditField(f *message.Field, labelWidth int) (result EditResult, err error) {
 	var (
-		state     *term.State
 		mode      modefunc
 		e         editor
 		restarted bool
 	)
-	state, _ = term.MakeRaw(int(os.Stdin.Fd()))
-	defer term.Restore(int(os.Stdin.Fd()), state)
 RESTART:
 	e = editor{
 		term: t, field: f,
@@ -279,7 +279,7 @@ RESTART:
 	f.EditApply(f, e.value)
 	e.value = f.EditValue(f)
 	e.display()
-	if problem := f.EditValid(f); problem != "" && (e.changed || !restarted) {
+	if problem := f.EditValid(f); problem != "" && result != ResultPrevious && (e.changed || !restarted) {
 		t.Error(problem)
 		restarted = true
 		goto RESTART

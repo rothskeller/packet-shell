@@ -1,6 +1,3 @@
-ANSI codes don't seem to work in Windows 10 cmd.exe without a registry edit.
-Arrow keys don't work even then.
-
 Add flags to the bulletin subcommands controlling whether they affect the global
 configuration.
 

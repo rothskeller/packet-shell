@@ -73,6 +73,8 @@ type Terminal interface {
 	// ReadCommand reads a command from the command line, with editing
 	// support where possible.
 	ReadCommand() (string, error)
+	// Close closes the terminal, restoring settings as needed.
+	Close()
 }
 
 type TableWriter interface {
@@ -126,7 +128,7 @@ func Init(human, batch bool) (t Terminal) {
 	}
 }
 
-var spaces = "                                                                                                    "
+var spaces = "                                                                                                                                                                                                                                                                                                            "
 
 func setLength(s string, l int) string {
 	if l < 0 {
