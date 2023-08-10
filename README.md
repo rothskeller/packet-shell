@@ -8,6 +8,7 @@ executable.  Available commands include:
     packet connect    connect, send queued messages, and receive messages
     packet delete     delete an unsent message completely
     packet draft      remove an unsent message from the send queue
+    packet dump       show a message in encoded form
     packet edit       edit an unsent outgoing message
     packet help       provide help on the packet shell or its commands
     packet ics309     generate an ICS-309 form with all messages
@@ -15,25 +16,26 @@ executable.  Available commands include:
     packet new        create a new outgoing message
     packet queue      queue an unsent message to be sent
     packet quit       quit the packet shell
-    packet receive    connect and receive incoming messages (no send)
-    packet reply      create a new reply to a received message
-    packet resend     create a new draft copy of a sent message
-    packet send       connect and send queued messages (no receive)
+    packet set        change a field value in an unsent, outgoing message
     packet show       show a message
 
 Running the `packet` command with no arguments starts a shell, in which multiple
 packet commands can be run without the `packet` prefix word.
 
-Most of the commands take, as arguments, the identification of a message.
-Messages can be identified by either their local message ID or, if known, their
-remote message ID.  The prefix and/or suffix can be left off of the message ID
-if not needed for uniqueness, so usually messages are identified by just the
-sequence number part of the message ID.  Leading zeros are not required or
-significant.
+Most of the commands take a «message-id» as an argument, identifying the message
+to act on.  Messages can be identified by either their local message ID or, if
+known, their remote message ID.  The prefix and/or suffix can be left off of the
+message ID if not needed for uniqueness, so usually messages are identified by
+just the sequence number part of the message ID.  Leading zeros are not required
+or significant.
 
-If the “command” listed after the word `packet` is a message ID of an existing
-message, a default command is invoked on that message.  The default command is
-`edit` for unsent outgoing messages and `show` for all other messages.
+Some of the commands take a «field-name» as an argument, identifying a specific
+field of the message.  The «field-name» can be either the PackItForms tag for
+the field (including any trailing period), or a shortened version of the field
+name as shown in the `show` and `edit` commands.  The `packet` command uses
+heuristics to select the best matching field for whatever name is given.  (Hint:
+string together all of the capital letters of the field name, like `tl` for “To
+Location”.)
 
 ## Configure Command
 
@@ -126,7 +128,7 @@ The `new` (or `n`) command creates a new outgoing message, and opens that
 message in an editor window (see “Edit Command” below).  The new message is
 given default values for all fields.
 
-    packet new «message-type»
+    packet new [--reply «message-id»] [--copy «message-id»] [«message-type»]
 
 The message type must be the tag of a known message type, such as `plain` or
 `ICS213`.  The tags are not case-sensitive, and can be abbreviated as long as
@@ -156,7 +158,7 @@ a “Reference” field, it is set to the origin message ID of the received mess
 The `edit` (or `e`) command edits the contents of the message.  The keyword
 `edit` can be omitted, since edit is the default action for unsent messages.
 
-    packet edit «message-id» [«field»|errors]
+    packet edit «message-id» [«field-name»|errors]
 
 The message editor prompts for each field of the message in order, allowing them
 to be edited.  Use Tab and Shift-Tab to move backward and forward in the list of
@@ -164,12 +166,10 @@ fields.  (Enter usually moves forward also, except in multi-line text fields,
 where it introduces a newline.)  Editing ends when you finish the last field or
 press the ESC key.  Press F1 for help on the current field.
 
-If a «field» is specified, editing begins with that field rather than the start
-of the form.  The specified field name can be a shortened version of the actual
-field name; the command uses heuristics to select the best matching field for
-whatever name is given.  (Hint: string together all of the capital letters of
-the field name, like `tl` for “To Location”.)  Editing starts with the first
-field if the specified field name doesn't match anything.
+If a «field-name» is specified, editing begins with that field rather than the
+start of the form.  (See the discussion of «field-name»s at the top of this page
+for details.  Editing starts with the first field if the specified field name
+doesn't match anything.
 
 If the keyword `errors` is provided, editing includes only those fields that
 have validation errors.
@@ -177,6 +177,19 @@ have validation errors.
 If the result of the edit has no validation errors, and the message is  not
 already in the send queue, the message editor asks whether to queue it.
 Messages with validation errors are removed from the send queue.
+
+## Set Command
+
+The `set` command changes the value of a field of an unsent message.
+
+    packet set «message-id» «field-name» [«value»|<«filename»]
+
+«message-id» identifies the message to be edited, and «field-name» identifies
+the field of the message to be changed.  See the top of this page for how to
+format these arguments.  If a «value» is specified, the field is set to that
+value.  If a less-than sign is specified, followed by a «filename», the field
+will be set to the contents of that file.  If neither is specified, the field
+value is cleared.
 
 ## Queue, Draft, and Delete Commands
 
@@ -252,24 +265,25 @@ receipt messages.
 
 ## Show Command
 
-The `show` (or `s`) command displays a message.  If the message has been sent or
-received, the `show` keyword can be omitted, since show is the default action
-for all messages except unsent messages.
+The `show` (or `s`) command displays a message or message field.  If the message
+has been sent or received, the `show` keyword can be omitted, since show is the
+default action for all messages except unsent messages.
 
-    packet show «message-ID» [«format»]
-    packet pdf «message-ID»
+    packet show «message-ID» [«field-name»] [>«filename»]
+    packet pdf «message-ID» 
+    packet raw «message-ID»
 
 «message-id» is the local or remote message ID of the message to show.  It can
-be just the numeric part if that is unambiguous.
+be just the numeric part if that is unambiguous.  If a «field-name» is
+specified, only the value of that field is printed; otherwise, all fields are
+printed in a flat text table layout.  If a «filename» is provided, following a
+">" character, the output will be written to the named file.
 
-«format» is one of:
+The `pdf` command renders the message in a PDF format (if it is of a type that
+supports PDF rendering), and opens it in the system PDF viewer.
 
-- `table` or `t` (the default): flat text table of field names and values
-- `raw` or `r`:  the PackItForms- and RFC-5322-encoded message
-- `pdf` or `p`:  PDF rendering of the form (opens in system PDF viewer)
-
-The `pdf` command (which cannot be abbreviated) is equivalent to the `show`
-command with a `pdf` «format».
+The `raw` command displays the message in the PackItForms and RFC-5322 encoding
+as it would be sent over the air.
 
 ## ICS-309 Command
 

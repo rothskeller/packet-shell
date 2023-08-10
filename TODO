@@ -1,2 +1,10 @@
 ANSI codes don't seem to work in Windows 10 cmd.exe without a registry edit.
 Arrow keys don't work even then.
+
+Add flags to the bulletin subcommands controlling whether they affect the global
+configuration.
+
+Consider adding cd, mkdir, ls commands.
+
+Rewrite the README to match current usage and leverage help text.  Or maybe get
+rid of it and point people at the help command.

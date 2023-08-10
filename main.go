@@ -1,11 +1,17 @@
 package main
 
 import (
-	"github.com/rothskeller/packet-cmd/shell"
+	"fmt"
+	"os"
+
+	"github.com/rothskeller/packet-cmd/cmd"
 	"github.com/rothskeller/packet/xscmsg"
 )
 
 func main() {
 	xscmsg.Register()
-	shell.Main()
+	if err := cmd.Execute(os.Args[1:]); err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
+		os.Exit(1)
+	}
 }

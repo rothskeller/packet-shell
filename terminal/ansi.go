@@ -1,34 +1,112 @@
-package editfield
+//go:build !windows
+
+package terminal
 
 import (
+	"fmt"
+	"io"
 	"os"
+	"strings"
 )
 
-// Key codes used in this program.  This isn't all possible key codes, but it's
-// the ones that are relevant to us.
-const (
-	keyUp = 0x80 + iota
-	keyDown
-	keyRight
-	keyLeft
-	keyShiftUp
-	keyShiftDown
-	keyShiftRight
-	keyShiftLeft
-	keyCtrlRight
-	keyCtrlLeft
-	keyCtrlShiftRight
-	keyCtrlShiftLeft
-	keyHome
-	keyEnd
-	keyShiftHome
-	keyShiftEnd
-	keyDelete
-	keyF1
-	keyBackTab
+type styled struct {
+	width        int
+	lastColor    int
+	listItemSeen bool
+	haveStatus   bool
+	x, y         int
+	hideCursor   bool
+	buf          *screenBuf
+}
 
-	keyCtrlC = 0x03
-)
+func (t *styled) print(color int, s string) {
+	t.setColor(color)
+	for idx := strings.IndexByte(s, '\n'); idx >= 0; idx = strings.IndexByte(s, '\n') {
+		io.WriteString(os.Stdout, s[:idx])
+		io.WriteString(os.Stdout, "\r\n")
+		t.x, t.y = 0, t.y+1
+		s = s[idx+1:]
+	}
+	io.WriteString(os.Stdout, s)
+	t.x += len(s)
+}
+
+func (t *styled) printb(color int, b []byte) {
+	t.setColor(color)
+	os.Stdout.Write(b)
+	t.x += len(b)
+}
+
+func (t *styled) setColor(color int) {
+	if color&0xFF00 == 0 {
+		color |= colorNormal & 0xFF00
+	}
+	if color&0x00FF == 0 {
+		color |= colorNormal & 0x00FF
+	}
+	if color == t.lastColor {
+		return
+	}
+	io.WriteString(os.Stdout, "\033[")
+	if color&0x00FF != t.lastColor&0x00FF {
+		fmt.Printf("38;5;%d", color&0x00FF)
+	}
+	if color&0x00FF != t.lastColor&0x00FF && color&0xFF00 != t.lastColor&0xFF00 {
+		io.WriteString(os.Stdout, ";")
+	}
+	if color&0xFF00 != t.lastColor&0xFF00 {
+		fmt.Printf("48;5;%d", color/256)
+	}
+	io.WriteString(os.Stdout, "m")
+	t.lastColor = color
+}
+
+func (t *styled) clearStatus() {
+	if t.haveStatus {
+		io.WriteString(os.Stdout, "\r")
+		t.x = 0
+		t.clearToEOL()
+		t.haveStatus = false
+	}
+}
+
+func (t *styled) clearToEOL() {
+	t.setColor(colorNormal)
+	io.WriteString(os.Stdout, "\033[K")
+}
+
+func (t *styled) clearToEOS() {
+	io.WriteString(os.Stdout, "\r")
+	t.setColor(colorNormal)
+	io.WriteString(os.Stdout, "\033[J\033[?25h")
+	t.x, t.y, t.hideCursor, t.buf = 0, 0, false, nil
+}
+
+func (t *styled) move(x, y int) {
+	if y > t.y {
+		fmt.Printf("\033[%dB", y-t.y)
+	} else if y < t.y {
+		fmt.Printf("\033[%dA", t.y-y)
+	}
+	if x > t.x {
+		fmt.Printf("\033[%dC", x-t.x)
+	} else if x < t.x {
+		fmt.Printf("\033[%dD", t.x-x)
+	}
+	t.x, t.y = x, y
+}
+
+func (t *styled) showCursor(show bool) {
+	if show == !t.hideCursor {
+		return
+	}
+	if show {
+		io.WriteString(os.Stdout, "\033[?25h")
+	} else {
+		io.WriteString(os.Stdout, "\033[?25l")
+	}
+	t.hideCursor = !show
+}
 
 var readKeyBuf [256]byte
 var pendingKeys []byte
@@ -38,7 +116,7 @@ var pendingKeys []byte
 // other keys of interest have values with the high bit set.  Since our data can
 // only allow plain ASCII, this is adequate.  A zero return indicates a read
 // error.
-func readKey() (key byte) {
+func (t *styled) readKey() (key byte) {
 	for len(pendingKeys) == 0 {
 		count, err := os.Stdin.Read(readKeyBuf[:])
 		if err != nil || count == 0 {
@@ -56,7 +134,7 @@ func readKey() (key byte) {
 }
 
 // unreadKey returns a key to the input buffer.
-func unreadKey(key byte) {
+func (t *styled) unreadKey(key byte) {
 	pendingKeys = append([]byte{key}, pendingKeys...)
 }
 
