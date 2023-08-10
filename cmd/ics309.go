@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 
 	"github.com/rothskeller/packet-cmd/config"
@@ -38,7 +37,7 @@ change to any message, to avoid reliance on a stale communications log.  Simply
 run "ics309" again to generate a new one.
 `,
 	Args: cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		// If the generated ICS-309 exists, just show it.
 		if term.Human() {
 			if _, err := os.Stat("ics309.pdf"); !errors.Is(err, os.ErrNotExist) {
@@ -51,8 +50,15 @@ run "ics309" again to generate a new one.
 			}
 		}
 		// Make sure we have the incident settings.
-		if err := config.RequestConfig("incident", "activation", "period", "tactical", "operator"); err != nil {
-			return err
+		if config.C.IncidentName == "" && term.Human() {
+			saveTerm := term
+			rootCmd.SetArgs([]string{"edit", "config", "Incident Name"})
+			err = rootCmd.Execute()
+			term.Close()
+			term = saveTerm
+			if err != nil {
+				return err
+			}
 		}
 		// Generate the file.
 		if _, _, err := incident.GenerateICS309(&incident.ICS309Header{
@@ -84,24 +90,17 @@ run "ics309" again to generate a new one.
 
 // showICS309 opens the system PDF viewer to show the generated ICS-309 log.
 func showICS309() (err error) {
-	var pages []string
-
-	if _, err := os.Stat("ics309.pdf"); err == nil {
-		pages = []string{"ics309.pdf"}
-	} else {
-		pages, _ = filepath.Glob("ics309-p*.pdf")
-	}
-	if len(pages) == 0 {
+	if _, err := os.Stat("ics309.pdf"); err != nil {
 		return errors.New("generated ICS-309 PDF files are missing")
 	}
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
-		cmd = exec.Command("cmd.exe", append([]string{"/C"}, pages...)...)
+		cmd = exec.Command("cmd.exe", "/C", "ics309.pdf")
 	case "darwin":
-		cmd = exec.Command("open", pages...)
+		cmd = exec.Command("open", "ics309.pdf")
 	default:
-		cmd = exec.Command("xdg-open", pages...)
+		cmd = exec.Command("xdg-open", "ics309.pdf")
 	}
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("starting PDF viewer: %s", err)

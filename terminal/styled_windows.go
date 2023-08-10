@@ -30,11 +30,11 @@ func init() {
 }
 
 func rawMode() {
-	if isTerminal() {
+	if isTerminal {
 		windows.SetConsoleMode(windows.Handle(int(os.Stdin.Fd())), 0x0200) // ENABLE_VIRTUAL_TERMINAL_INPUT
 	}
 }
 
 func cookedMode() {
-	windows.SetConsoleMode(windows.Handle(int(os.Stdin.Fd())), initialStateI)
+	windows.SetConsoleMode(windows.Handle(int(os.Stdin.Fd())), initialState)
 }

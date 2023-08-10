@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/rothskeller/packet-cmd/config"
 	"github.com/rothskeller/packet/envelope"
 	"github.com/rothskeller/packet/incident"
 	"github.com/rothskeller/packet/message"
@@ -17,7 +18,7 @@ func init() {
 }
 
 var setCmd = &cobra.Command{
-	Use:                   "set [--force] «message-id» «field-name» [«value»]",
+	Use:                   "set [--force] «message-id»|config «field-name» [«value»]",
 	DisableFlagsInUseLine: true,
 	Short:                 "Set the value of a field of a message",
 	Long: `The "set" command sets the value of a field of a message.  If a «value» is
@@ -26,7 +27,9 @@ from standard input.  The provided value must be valid for the field unless
 the --force flag is given.
 
 «message-id» must be the local message ID of an unsent outgoing message.  It
-can be just the numeric part of the ID if that is unique.
+can be just the numeric part of the ID if that is unique.  If the word
+"config" is used instead, the "set" command sets variables in the incident /
+activation settings.
 
 «field-name» is the name of the field to set.  It can be the PackItForms tag
 for the field (including the trailing period, if any), or it can be the full
@@ -45,27 +48,33 @@ the field name, such as "ocs" for "Operator Call Sign."
 			newprob   bool
 			lmichange string
 		)
-		if lmi, err = expandMessageID(args[0], false); err != nil {
-			return err
-		}
-		if env, msg, err = incident.ReadMessage(lmi); err != nil {
-			return fmt.Errorf("reading %s: %s", lmi, err)
-		}
-		if env.IsReceived() {
-			return errors.New("cannot set field of received message")
-		}
-		if env.IsFinal() {
-			return errors.New("message has already been sent")
-		}
-		if !msg.Editable() {
-			return fmt.Errorf("%ss are not editable", msg.Base().Type.Name)
+		if args[0] == "config" {
+			lmi, msg = "config", &config.C
+		} else {
+			if lmi, err = expandMessageID(args[0], false); err != nil {
+				return err
+			}
+			if env, msg, err = incident.ReadMessage(lmi); err != nil {
+				return fmt.Errorf("reading %s: %s", lmi, err)
+			}
+			if env.IsReceived() {
+				return errors.New("cannot set field of received message")
+			}
+			if env.IsFinal() {
+				return errors.New("message has already been sent")
+			}
+			if !msg.Editable() {
+				return fmt.Errorf("%ss are not editable", msg.Base().Type.Name)
+			}
 		}
 		// Build the list of fields that can be set.  This includes the
 		// To address list, an all editable fields.  We disregard
 		// EditSkip; that allows addressing fields with PIFOTags that
 		// are normally aggregated into other fields and not directly
 		// editable.
-		fields = append(fields, newToAddressField(&env.To))
+		if lmi != "config" {
+			fields = append(fields, newToAddressField(&env.To))
+		}
 		for _, f := range msg.Base().Fields {
 			if f.EditHelp != "" {
 				fields = append(fields, f)
@@ -90,7 +99,7 @@ the field name, such as "ocs" for "Operator Call Sign."
 		// If we edited the LMI, check it.  We have to have a valid one
 		// to save the file.  If they changed it, make sure the new one
 		// isn't already in use.
-		if field.Value == msg.Base().FOriginMsgID {
+		if lmi != "config" && field.Value == msg.Base().FOriginMsgID {
 			if p := field.EditValid(field); p != "" {
 				return errors.New(p)
 			}
@@ -112,7 +121,7 @@ the field name, such as "ocs" for "Operator Call Sign."
 		if newprob {
 			if force, _ := cmd.Flags().GetBool("force"); force {
 				term.Confirm("NOTE: applying the changes anyway since --force was used")
-				if env.ReadyToSend && fields[0].EditValid(fields[0]) != "" {
+				if lmi != "config" && env.ReadyToSend && fields[0].EditValid(fields[0]) != "" {
 					env.ReadyToSend = false
 					term.Confirm("NOTE: removing from send queue; can't send without valid To address")
 				}
@@ -121,6 +130,10 @@ the field name, such as "ocs" for "Operator Call Sign."
 			}
 		}
 		// Apply the change.
+		if lmi == "config" {
+			config.SaveConfig()
+			return nil
+		}
 		if lmichange != "" {
 			if err = incident.SaveMessage(lmichange, "", env, msg); err != nil {
 				return fmt.Errorf("saving %s: %s", lmichange, err)

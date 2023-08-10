@@ -22,7 +22,7 @@ func init() {
 }
 
 var editCmd = &cobra.Command{
-	Use:                   "edit «message-id» [--errors] [«field-name»]",
+	Use:                   "edit «message-id»|config [--errors] [«field-name»]",
 	Aliases:               []string{"e"},
 	Short:                 "Edit an unsent message",
 	Args:                  cobra.RangeArgs(1, 2),
@@ -33,7 +33,9 @@ and allows that field's value to be changed.  Note that the "edit" command
 cannot be used in scripted mode (see "packet help script").
 
 «message-id» must be the local message ID of an unsent outgoing message.  It
-can be just the numeric part of the message ID if that is unique.
+can be just the numeric part of the message ID if that is unique.  If the word
+"config" is given instead, the "edit" command edits the incident / activation
+settings instead (see "packet help config").
 
 The "edit" command normally starts with the first field of the message (or
 the first that has an error, if --errors is used).  If a «field-name» is
@@ -100,20 +102,26 @@ force the queueing of an invalid message, use the "queue" command.)
 		if !term.Human() {
 			return errors.New("editing is not supported in non-interactive / --script use")
 		}
-		if lmi, err = expandMessageID(args[0], false); err != nil {
-			return err
-		}
-		if env, msg, err = incident.ReadMessage(lmi); err != nil {
-			return fmt.Errorf("reading %s: %s", lmi, err)
-		}
-		if env.IsReceived() {
-			return errors.New("can't edit a received message")
-		}
-		if env.IsFinal() {
-			return errors.New("message has already been sent")
-		}
-		if !msg.Editable() {
-			return fmt.Errorf("%ss do not support editing", msg.Base().Type.Name)
+		if args[0] == "config" {
+			lmi = "config"
+			env = new(envelope.Envelope)
+			msg = &config.C
+		} else {
+			if lmi, err = expandMessageID(args[0], false); err != nil {
+				return err
+			}
+			if env, msg, err = incident.ReadMessage(lmi); err != nil {
+				return fmt.Errorf("reading %s: %s", lmi, err)
+			}
+			if env.IsReceived() {
+				return errors.New("can't edit a received message")
+			}
+			if env.IsFinal() {
+				return errors.New("message has already been sent")
+			}
+			if !msg.Editable() {
+				return fmt.Errorf("%ss do not support editing", msg.Base().Type.Name)
+			}
 		}
 		if len(args) > 1 {
 			fieldname = args[1]
@@ -132,7 +140,9 @@ func doEdit(lmi string, env *envelope.Envelope, msg message.Message, startField 
 		wasQueued  = env.ReadyToSend
 	)
 	// Build the list of fields to be edited.
-	fields = append(fields, newToAddressField(&env.To))
+	if lmi != "config" {
+		fields = append(fields, newToAddressField(&env.To))
+	}
 	for _, f := range msg.Base().Fields {
 		if f.EditHelp != "" {
 			fields = append(fields, f)
@@ -143,7 +153,9 @@ func doEdit(lmi string, env *envelope.Envelope, msg message.Message, startField 
 	if field, err = expandFieldName(fields, startField, true); err != nil {
 		return err
 	}
-	fields = append(fields, newSendQueueField(fields, &env.ReadyToSend))
+	if lmi != "config" {
+		fields = append(fields, newSendQueueField(fields, &env.ReadyToSend))
+	}
 LOOP: // Run the editor loop.
 	for {
 		var result terminal.EditResult
@@ -181,6 +193,11 @@ LOOP: // Run the editor loop.
 		default:
 			panic("unknown result code")
 		}
+	}
+	// If editing the configuration, save it.
+	if lmi == "config" {
+		config.SaveConfig()
+		return nil
 	}
 	// Make sure we have a valid LMI.  We have to have one to save the file.
 	newlmi := *msg.Base().FOriginMsgID

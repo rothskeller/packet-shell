@@ -59,7 +59,7 @@ checks are performed as well.  (See the "packet bulletins" command for
 scheduling of bulletin checks.)
 `,
 	Args: cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		var (
 			sendlevel int
 			conn      connection
@@ -94,8 +94,19 @@ scheduling of bulletin checks.)
 			term.Confirm("Nothing to send.")
 			return nil
 		}
-		if err := config.RequestConfig("bbs", "tnc", "operator", "tactical", "password", "msgid"); err != nil {
-			return err
+		if !haveConnectConfig() && term.Human() {
+			term.Confirm("Please provide necessary configuration settings for connection:")
+			saveTerm := term
+			rootCmd.SetArgs([]string{"edit", "config"})
+			err = rootCmd.Execute()
+			term.Close()
+			term = saveTerm
+			if err != nil {
+				return err
+			}
+		}
+		if !haveConnectConfig() {
+			term.Error("missing necessary configuration settings")
 		}
 		// Run the connection.
 		defer term.Status("")
@@ -164,6 +175,24 @@ func preConnectScan(sendlevel int, areas map[string]*config.BulletinConfig) (
 		}
 	}
 	return
+}
+
+// haveConnectConfig returns whether we have all of the necessary config
+// settings to make a connection to the server.
+func haveConnectConfig() bool {
+	if config.C.BBSAddress == "" || config.C.OpCall == "" || config.C.MessageID == "" {
+		return false
+	}
+	if strings.Contains(config.C.BBSAddress, ":") {
+		if config.C.Password == "" {
+			return false
+		}
+	} else {
+		if config.C.SerialPort == "" {
+			return false
+		}
+	}
+	return true
 }
 
 // doConnect connects to the BBS and performs the desired operations.  It sends
