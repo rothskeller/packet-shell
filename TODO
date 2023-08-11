@@ -3,8 +3,6 @@ Consider adding cd, mkdir, ls commands.
 Rewrite the README to match current usage and leverage help text.  Or maybe get
 rid of it and point people at the help command.
 
-Support redirection on shell command line.
-
 Add default destination
 Add sending of bulletins
 

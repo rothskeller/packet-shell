@@ -83,16 +83,17 @@ func New(cmd *cobra.Command) (t Terminal) {
 	if script, _ := cmd.Flags().GetBool("script"); script {
 		return newBatch()
 	}
+	tty := isTerminal()
 	// If they asked for no-script mode, give it to them.
 	if noscript, _ := cmd.Flags().GetBool("no-script"); noscript {
-		if isTerminal {
+		if tty {
 			return newStyled()
 		} else {
 			return newPlain()
 		}
 	}
 	// They didn't ask, so decide based on terminal type.
-	if isTerminal {
+	if tty {
 		return newStyled()
 	} else {
 		return newBatch()

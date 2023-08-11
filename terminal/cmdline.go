@@ -20,7 +20,7 @@ func (t *styled) ReadCommand() (line string, err error) {
 	defer func() {
 		t.move(0, 0)
 		t.clearToEOS()
-		cookedMode()
+		restoreTerminal(t.tstate)
 	}()
 	for {
 		var buf = newScreenBuf(t.width - 1)

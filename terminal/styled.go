@@ -59,6 +59,7 @@ const (
 )
 
 type styled struct {
+	tstate       state
 	width        int
 	lastColor    int
 	listItemSeen bool
@@ -70,6 +71,7 @@ type styled struct {
 
 func newStyled() (t *styled) {
 	t = new(styled)
+	t.tstate = openTerminal()
 	if w, _, _ := term.GetSize(int(os.Stdout.Fd())); w > 0 {
 		t.width = w
 	} else if w, _ := strconv.Atoi(os.Getenv("COLUMNS")); w > 0 {
@@ -82,7 +84,7 @@ func newStyled() (t *styled) {
 
 func (*styled) Human() bool { return true }
 
-func (t *styled) Close() { cookedMode() }
+func (t *styled) Close() { restoreTerminal(t.tstate) }
 
 func (t *styled) Confirm(f string, args ...any) {
 	var s = fmt.Sprintf(f, args...)
@@ -277,7 +279,7 @@ func (t *styled) EditField(f *message.Field, labelWidth int) (result EditResult,
 		restarted bool
 	)
 	rawMode()
-	defer cookedMode()
+	defer restoreTerminal(t.tstate)
 RESTART:
 	e = editor{
 		term: t, field: f,

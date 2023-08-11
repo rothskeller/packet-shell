@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 
@@ -14,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var term, saveTerm terminal.Terminal
+var term terminal.Terminal
 
 var ErrQuit = errors.New("quit requested")
 
@@ -30,9 +31,15 @@ func init() {
 		}
 		for {
 			var (
-				line string
-				args []string
+				line     string
+				args     []string
+				in       *os.File
+				out      *os.File
+				saveIn   *os.File
+				saveOut  *os.File
+				saveTerm terminal.Terminal
 			)
+			// Read and parse the command line.
 			if line, err = term.ReadCommand(); err != nil {
 				if err == io.EOF {
 					line = "quit"
@@ -40,14 +47,37 @@ func init() {
 					return err
 				}
 			}
-			args = tokenizeLine(line)
-			rootCmd.SetArgs(args)
+			if args, in, out, err = parseCommandLine(line); err != nil {
+				term.Error(err.Error())
+				continue
+			}
+			// Save the old I/O and terminal, and apply the new I/O.
+			// (The new terminal will be applied by PersistentPreRun
+			// below, after flags are parsed.)
+			saveIn, saveOut = os.Stdin, os.Stdout
+			if in != nil {
+				os.Stdin = in
+			}
+			if out != nil {
+				os.Stdout = out
+			}
 			saveTerm = term
-			if err = rootCmd.Execute(); err != nil && err != ErrQuit {
+			// Run the command.
+			rootCmd.SetArgs(args)
+			err = rootCmd.Execute()
+			// Restore the old terminal, stdin, and stdout.
+			term.Close()
+			os.Stdin, os.Stdout, term = saveIn, saveOut, saveTerm
+			if in != nil {
+				in.Close()
+			}
+			if out != nil {
+				out.Close()
+			}
+			// Handle the result of the command.
+			if err != nil && err != ErrQuit {
 				term.Error(err.Error())
 			}
-			term.Close()
-			term, saveTerm = saveTerm, nil
 			if err == ErrQuit {
 				return nil
 			}
@@ -68,9 +98,6 @@ running multiple commands without the "packet" prefix on each.
 	SilenceErrors:     true,
 	SilenceUsage:      true,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		if term != nil {
-			saveTerm = term
-		}
 		term = terminal.New(cmd)
 	},
 }
@@ -237,6 +264,52 @@ func downcase(b byte) byte {
 	return b
 }
 
+// parseCommandLine parses a command line that the user typed at our command
+// line.  It interprets redirection.
+func parseCommandLine(line string) (args []string, in, out *os.File, err error) {
+	args = tokenizeLine(line)
+	i := 0
+	for i < len(args) {
+		if args[i] == "<" {
+			if in != nil {
+				return nil, nil, nil, errors.New("multiple input redirects on command line")
+			}
+			if i == len(args)-1 || args[i+1] == "<" || args[i+1] == ">" || args[i+1] == ">>" {
+				return nil, nil, nil, errors.New("missing filename after <")
+			}
+			if in, err = os.Open(args[i+1]); err != nil {
+				return nil, nil, nil, err
+			}
+			args = append(args[:i], args[i+2:]...)
+			continue
+		}
+		if args[i] == ">" || args[i] == ">>" {
+			if out != nil {
+				return nil, nil, nil, errors.New("multiple output redirects on command line")
+			}
+			if i == len(args)-1 || args[i+1] == "<" || args[i+1] == ">" || args[i+1] == ">>" {
+				return nil, nil, nil, errors.New("missing filename after " + args[i])
+			}
+			if args[i] == ">" {
+				out, err = os.Create(args[i+1])
+			} else {
+				out, err = os.OpenFile(args[i+1], os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
+			}
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			args = append(args[:i], args[i+2:]...)
+			continue
+		}
+		i++
+	}
+	return args, in, out, nil
+}
+
+// tokenizeLine parses a received command line into words.  It supports
+// rudimentary quoting with either ' or ".  It does not support backslash
+// escapes.  It treats unquoted <, >, and >> as separate words even when not
+// surrounded by whitespace.
 func tokenizeLine(line string) (args []string) {
 	var partial string
 
@@ -258,6 +331,13 @@ func tokenizeLine(line string) (args []string) {
 			idx2 += idx + 1 // make it an offset into line
 			partial += line[idx+1 : idx2]
 			line = line[idx2+1:]
+			continue
+		}
+		if line[idx] == '>' && idx < len(line)-1 && line[idx+1] == '>' {
+			if partial != "" {
+				args, partial = append(args, partial), ""
+			}
+			args, line = append(args, line[idx:idx+2]), line[idx+2:]
 			continue
 		}
 		if line[idx] == '<' || line[idx] == '>' {
