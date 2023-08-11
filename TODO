@@ -1,7 +1,8 @@
 Rewrite the README to match current usage and leverage help text.  Or maybe get
 rid of it and point people at the help command.
 
-Add default destination
 Add sending of bulletins
 
 Problems with initial sync with TNC
+
+Revise handling of editing To address lists.  Validate defdest at the same time.

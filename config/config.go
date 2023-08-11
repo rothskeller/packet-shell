@@ -49,6 +49,7 @@ type PacketConfig struct {
 	TacRequested        bool                       `json:",omitempty"`
 	Password            string                     `json:",omitempty"`
 	MessageID           string                     `json:",omitempty"`
+	DefDest             string                     `json:",omitempty"`
 	DefBody             string                     `json:",omitempty"`
 	Bulletins           map[string]*BulletinConfig `json:",omitempty"`
 	connType            string
@@ -165,6 +166,7 @@ func SaveConfig() {
 	reduced.TacName = ""
 	reduced.TacRequested = false
 	reduced.MessageID = ""
+	reduced.DefDest = ""
 	reduced.DefBody = ""
 	reduced.Bulletins = nil
 	by, _ = json.Marshal(&reduced)
@@ -400,6 +402,11 @@ func makeConfigFields() []*message.Field {
 				}
 				return C.MessageID
 			},
+		}),
+		message.NewTextField(&message.Field{
+			Label:    "Default Destination",
+			Value:    &C.DefDest,
+			EditHelp: `This is an optional list of "To" addresses to be filled into every new message.`,
 		}),
 		message.NewMultilineField(&message.Field{
 			Label:    "Default Body Text",
