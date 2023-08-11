@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"net/mail"
 	"strings"
 
 	"github.com/rothskeller/packet-cmd/terminal"
@@ -79,8 +78,8 @@ func listItemForMessage(lmi, rmi string, env *envelope.Envelope) (li *terminal.L
 		} else if env.ReceivedArea != "" {
 			var from = strings.ToUpper(env.ReceivedArea)
 			li.From = strings.Replace(from, "@ALL", "@", 1) // for brevity
-		} else if addr, err := mail.ParseAddress(env.From); err == nil {
-			var from, _, _ = strings.Cut(addr.Address, "@")
+		} else if addrs, err := envelope.ParseAddressList(env.From); err == nil {
+			var from, _, _ = strings.Cut(addrs[0].Address, "@")
 			li.From = strings.ToUpper(from)
 		} else {
 			li.From = "??????"
@@ -90,8 +89,8 @@ func listItemForMessage(lmi, rmi string, env *envelope.Envelope) (li *terminal.L
 			li.To = rmi
 		} else if len(env.To) != 0 {
 			var to string
-			if addr, err := mail.ParseAddress(env.To[0]); err == nil {
-				to = addr.Address
+			if addrs, err := envelope.ParseAddressList(env.To[0]); err == nil {
+				to = addrs[0].Address
 			} else {
 				to = env.To[0]
 			}

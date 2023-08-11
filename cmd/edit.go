@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"net/mail"
 	"regexp"
 	"strings"
 
@@ -262,7 +261,7 @@ func newToAddressField(to *[]string) (f *message.Field) {
 			for _, address := range *to {
 				if jnosMailboxRE.MatchString(address) {
 					// do nothing
-				} else if _, err := mail.ParseAddress(address); err == nil {
+				} else if list, err := envelope.ParseAddressList(address); err == nil && len(list) == 1 {
 					// do nothing
 				} else {
 					return fmt.Sprintf(`The "To" field contains %q, which is not a valid JNOS mailbox name, BBS network address, or email address.`, address)

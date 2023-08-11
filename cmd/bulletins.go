@@ -93,6 +93,9 @@ running in noninteractive (--batch) mode, the table is in CSV format.
 			}
 		}
 		// Make the requested changes.
+		if config.C.Bulletins == nil {
+			config.C.Bulletins = make(map[string]*config.BulletinConfig)
+		}
 		for _, area := range args {
 			area = strings.ToUpper(area)
 			if bc, ok := config.C.Bulletins[area]; ok {
