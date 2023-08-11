@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -16,6 +17,7 @@ import (
 )
 
 var term terminal.Terminal
+var safeDir string
 
 var ErrQuit = errors.New("quit requested")
 
@@ -24,6 +26,13 @@ func init() {
 	rootCmd.PersistentFlags().Bool("no-script", false, "human-friendly input and output")
 	rootCmd.PersistentFlags().MarkHidden("no-script")
 	rootCmd.MarkFlagsMutuallyExclusive("script", "no-script")
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) (err error) {
+		term = terminal.New(cmd)
+		if cmd != rootCmd && safeDir != "" {
+			return errors.New(safeDir)
+		}
+		return nil
+	}
 	rootCmd.RunE = func(*cobra.Command, []string) (err error) {
 		if !term.Human() {
 			Execute([]string{"help"})
@@ -39,6 +48,13 @@ func init() {
 				saveOut  *os.File
 				saveTerm terminal.Terminal
 			)
+			// If the directory is not safe, give a warning to them
+			// to change it.  Then clear the problem so we don't
+			// trip over it again.
+			if safeDir != "" {
+				term.Confirm(`WARNING: %s  Use the "cd" command to switch to a different directory.`, safeDir)
+				safeDir = ""
+			}
 			// Read and parse the command line.
 			if line, err = term.ReadCommand(); err != nil {
 				if err == io.EOF {
@@ -53,7 +69,7 @@ func init() {
 			}
 			// Save the old I/O and terminal, and apply the new I/O.
 			// (The new terminal will be applied by PersistentPreRun
-			// below, after flags are parsed.)
+			// above, after flags are parsed.)
 			saveIn, saveOut = os.Stdin, os.Stdout
 			if in != nil {
 				os.Stdin = in
@@ -97,12 +113,10 @@ running multiple commands without the "packet" prefix on each.
 	CompletionOptions: cobra.CompletionOptions{HiddenDefaultCmd: true},
 	SilenceErrors:     true,
 	SilenceUsage:      true,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		term = terminal.New(cmd)
-	},
 }
 
 func Execute(args []string) (err error) {
+	safeDir = safeDirectory()
 	rootCmd.SetArgs(args)
 	err = rootCmd.Execute()
 	term.Close()
@@ -357,4 +371,39 @@ func tokenizeLine(line string) (args []string) {
 		args = append(args, partial)
 	}
 	return args
+}
+
+func safeDirectory() string {
+	var (
+		cwd  string
+		home string
+		temp *os.File
+		err  error
+	)
+	if cwd, err = os.Getwd(); err != nil {
+		return `The current directory is not readable.`
+	}
+	if np, err := filepath.EvalSymlinks(cwd); err == nil {
+		cwd = np
+	}
+	if home = os.Getenv("HOME"); home != "" {
+		if cwd == home {
+			return `The current directory is the user's home directory.  This is not a suitable location for message storage because each incident should have its own directory.`
+		}
+		if cwd == filepath.Join(home, "Desktop") {
+			return `The current directory is the user's desktop.  This is not a suitable location for message storage because each incident should have its own directory.`
+		}
+		if cwd == filepath.Join(home, "Documents") {
+			return `The current directory is the user's documents folder.  This is not a suitable location for message storage because each incident should have its own directory.`
+		}
+	}
+	if cwd == "/" || (len(cwd) == 3 && cwd[1] == ':' && cwd[2] == '\\') {
+		return `The current directory is the file system root.  This is not a suitable location for message storage because each incident should have its own directory.`
+	}
+	if temp, err = os.Create(".test-for-writable"); err != nil {
+		return `The current directory is not writable.  No messages can be stored here.`
+	}
+	temp.Close()
+	os.Remove(".test-for-writable")
+	return ""
 }
