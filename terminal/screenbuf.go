@@ -62,8 +62,7 @@ func (t *styled) paintBuf(n *screenBuf) {
 	if t.buf == nil {
 		t.buf = newScreenBuf(len(n.lines[0].chars))
 	}
-	// Handle each line separately.  We assume that the new buffer (n) ha
-	// at least as many lines as the screen (t.buf).
+	// Handle each line separately.
 	for y, nline := range n.lines {
 		// If the screen doesn't have this line, add it to the screen
 		// buffer, and emit a newline at the bottom of the screen to
@@ -110,7 +109,18 @@ func (t *styled) paintBuf(n *screenBuf) {
 		copy(oline.chars, nline.chars)
 		copy(oline.colors, nline.colors)
 	}
+	// Handle the case where the new buffer has fewer lines than the screen
+	// buffer.
+	for len(t.buf.lines) > len(n.lines) {
+		blank := screenBufLine{
+			chars:  bytes.Repeat([]byte{' '}, len(t.buf.lines[0].chars)),
+			colors: make([]uint16, len(t.buf.lines[0].chars)),
+		}
+		t.paintLine(0, len(blank.chars), len(t.buf.lines)-1, blank)
+		t.buf.lines = t.buf.lines[:len(t.buf.lines)-1]
+	}
 }
+
 func (t *styled) paintLine(startX, endX, y int, line screenBufLine) {
 	x := startX
 	for x < endX {
