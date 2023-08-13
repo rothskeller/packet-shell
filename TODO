@@ -4,5 +4,3 @@ rid of it and point people at the help command.
 Add sending of bulletins
 
 Problems with initial sync with TNC
-
-Revise handling of editing To address lists.  Validate defdest at the same time.

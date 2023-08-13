@@ -47,7 +47,7 @@ can be just the numeric part of the ID if that is unique.
 				return errors.New("message has already been sent")
 			}
 		}
-		if len(env.To) == 0 {
+		if env.To == "" {
 			return errors.New("message cannot be queued without a To: address")
 		}
 		if !env.ReadyToSend {

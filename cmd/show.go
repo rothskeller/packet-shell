@@ -60,11 +60,11 @@ shortened version of the field name, such as "ocs" for "Operator Call Sign."
 			if env.IsReceived() {
 				fields = append(fields, makeArtificialField("From", env.From))
 				fields = append(fields, makeArtificialField("Sent", env.Date.Format("01/02/2006 15:04")))
-				fields = append(fields, makeArtificialField("To", strings.Join(env.To, ", ")))
+				fields = append(fields, makeArtificialField("To", env.To))
 				fields = append(fields, makeArtificialField("Received", fmt.Sprintf("%s as %s", env.ReceivedDate.Format("01/02/2006 15:04"), lmi)))
 			} else {
-				if len(env.To) != 0 {
-					fields = append(fields, makeArtificialField("To", strings.Join(env.To, ", ")))
+				if env.To != "" {
+					fields = append(fields, makeArtificialField("To", env.To))
 				}
 				if !env.Date.IsZero() {
 					fields = append(fields, makeArtificialField("Sent", env.Date.Format("01/02/2006 15:04")))

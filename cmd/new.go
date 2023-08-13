@@ -109,7 +109,7 @@ be an unambiguous abbreviation of one of the supported message types.  Use
 				if !srcenv.IsReceived() {
 					return fmt.Errorf("%s is not a received message", srclmi)
 				}
-				env.To = []string{srcenv.From}
+				env.To = srcenv.From
 				env.SubjectLine = srcenv.SubjectLine
 				if typetag == "" {
 					typetag = srcmsg.Base().Type.Tag
@@ -132,16 +132,8 @@ be an unambiguous abbreviation of one of the supported message types.  Use
 			if srcmsg != nil && srcmsg.Base().FOriginMsgID != nil && msg.Base().FReference != nil {
 				*msg.Base().FReference = *srcmsg.Base().FOriginMsgID
 			}
-			if len(env.To) == 0 && config.C.DefDest != "" {
-				if addrs, err := envelope.ParseAddressList(config.C.DefDest); err == nil {
-					for _, a := range addrs {
-						if a.Name != "" {
-							env.To = append(env.To, a.String())
-						} else {
-							env.To = append(env.To, a.Address)
-						}
-					}
-				}
+			if env.To == "" {
+				env.To = config.C.DefDest
 			}
 			if msg.Base().FBody != nil && *msg.Base().FBody == "" {
 				*msg.Base().FBody = config.C.DefBody

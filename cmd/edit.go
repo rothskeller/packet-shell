@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/rothskeller/packet-cmd/config"
@@ -200,7 +199,7 @@ LOOP: // Run the editor loop.
 	}
 	// Make sure we have a valid LMI.  We have to have one to save the file.
 	newlmi := *msg.Base().FOriginMsgID
-	if !config.MsgIDRE.MatchString(newlmi) {
+	if !incident.MsgIDRE.MatchString(newlmi) {
 		if lmi != "" {
 			newlmi = lmi // restore the one it had when we started
 		} else {
@@ -234,41 +233,12 @@ LOOP: // Run the editor loop.
 	return nil
 }
 
-var jnosMailboxRE = regexp.MustCompile(`(?i)^[A-Z][A-Z0-9]{0,5}$`)
-
-func newToAddressField(to *[]string) (f *message.Field) {
-	var joined = strings.Join(*to, ", ")
-	return message.NewTextField(&message.Field{
+func newToAddressField(to *string) (f *message.Field) {
+	return message.NewAddressListField(&message.Field{
 		Label:    "To",
-		Value:    &joined,
+		Value:    to,
 		Presence: message.Required,
 		EditHelp: "This is the list of addresses to which the message is sent.  Each address must be a JNOS mailbox name, a BBS network address, or an email address.  The addresses must be separated by commas.  At least one address is required.",
-		EditApply: func(f *message.Field, s string) {
-			addresses := strings.Split(s, ",")
-			j := 0
-			for _, address := range addresses {
-				if trim := strings.TrimSpace(address); trim != "" {
-					addresses[j], j = trim, j+1
-				}
-			}
-			*f.Value = strings.Join(addresses[:j], ", ")
-			*to = addresses[:j]
-		},
-		EditValid: func(f *message.Field) string {
-			if p := f.PresenceValid(); p != "" {
-				return p
-			}
-			for _, address := range *to {
-				if jnosMailboxRE.MatchString(address) {
-					// do nothing
-				} else if list, err := envelope.ParseAddressList(address); err == nil && len(list) == 1 {
-					// do nothing
-				} else {
-					return fmt.Sprintf(`The "To" field contains %q, which is not a valid JNOS mailbox name, BBS network address, or email address.`, address)
-				}
-			}
-			return ""
-		},
 	})
 }
 

@@ -21,7 +21,6 @@ var (
 	fccCallSignRE = regexp.MustCompile(`(?i)^(?:A[A-L][0-9][A-Z]{1,3}|[KNW][0-9][A-Z]{2,3}|[KNW][A-Z][0-9][A-Z]{1,3})$`)
 	ax25RE        = regexp.MustCompile(`(?i)^(?:A[A-L][0-9][A-Z]{1,3}|[KNW][0-9][A-Z]{2,3}|[KNW][A-Z][0-9][A-Z]{1,3})-(?:1[0-5]|[1-9])$`)
 	comPortRE     = regexp.MustCompile(`(?i)COM[1-9]:?$`)
-	MsgIDRE       = regexp.MustCompile(`^([0-9][A-Z]{2}|[A-Z][A-Z0-9]{2})-([0-9]*[1-9][0-9]*)([A-Z]?)$`)
 )
 
 // packetConf is the name of the packet configuration file.
@@ -403,7 +402,7 @@ func makeConfigFields() []*message.Field {
 				return C.MessageID
 			},
 		}),
-		message.NewTextField(&message.Field{
+		message.NewAddressListField(&message.Field{
 			Label:    "Default Destination",
 			Value:    &C.DefDest,
 			EditHelp: `This is an optional list of "To" addresses to be filled into every new message.`,

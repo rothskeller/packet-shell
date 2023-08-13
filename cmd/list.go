@@ -87,17 +87,15 @@ func listItemForMessage(lmi, rmi string, env *envelope.Envelope) (li *terminal.L
 	} else {
 		if rmi != "" {
 			li.To = rmi
-		} else if len(env.To) != 0 {
-			var to string
-			if addrs, err := envelope.ParseAddressList(env.To[0]); err == nil {
-				to = addrs[0].Address
-			} else {
-				to = env.To[0]
-			}
-			to, _, _ = strings.Cut(to, "@")
-			li.To = strings.ToUpper(to)
 		} else {
-			li.To = "??????   "
+			if addrs, err := envelope.ParseAddressList(env.To); err != nil && env.To != "" {
+				li.To = env.To
+			} else if len(addrs) == 0 {
+				li.To = "??????   "
+			} else {
+				to, _, _ := strings.Cut(addrs[0].Address, "@")
+				li.To = strings.ToUpper(to)
+			}
 		}
 	}
 	li.LMI = lmi
