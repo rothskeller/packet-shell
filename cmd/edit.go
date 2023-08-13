@@ -238,7 +238,7 @@ func newToAddressField(to *string) (f *message.Field) {
 		Label:    "To",
 		Value:    to,
 		Presence: message.Required,
-		EditHelp: "This is the list of addresses to which the message is sent.  Each address must be a JNOS mailbox name, a BBS network address, or an email address.  The addresses must be separated by commas.  At least one address is required.",
+		EditHelp: "This is the list of addresses to which the message is sent.  Each address must be a JNOS mailbox name, a JNOS category@distribution bulletin address, a BBS network address, or an email address.  The addresses must be separated by commas.  At least one address is required.",
 	})
 }
 

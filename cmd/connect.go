@@ -472,7 +472,7 @@ func (c *connection) bulletinsToFetch(area string, have map[string]bool) (nums [
 		return nil, ErrInterrupted
 	}
 	if idx := strings.IndexByte(area, '@'); idx >= 0 {
-		to, areaonly = area[:idx], area[idx+1:]
+		to, areaonly = area[:idx], "ALL"+area[idx+1:]
 	} else {
 		areaonly = area
 	}

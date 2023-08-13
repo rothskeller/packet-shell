@@ -36,7 +36,7 @@ immediate-only connections.)
 If any «area»s are listed on the command line, the schedules for bulletin
 checks in those areas will be updated.  The «area»s are names of bulletin areas
 (e.g., "XSCEVENT"), optionally preceded by a recipient name and an at-sign
-(e.g., "XND@ALLXSC").  The schedules for them will be updated as follows:
+(e.g., "XND@XSC").  The schedules for them will be updated as follows:
   - If the --now (-n) flag is given, the areas will be checked during the next
     connection, and their existing schedules will resume unchanged after that.
   - If the --stop (-s) flag is given, no further checks will be performed for
@@ -85,11 +85,12 @@ running in noninteractive (--batch) mode, the table is in CSV format.
 			}
 		} else {
 			// We were given some area names.  Make sure they're
-			// valid ones.
-			for _, arg := range args {
+			// valid ones.  Also normalize them.
+			for i, arg := range args {
 				if !areaRE.MatchString(arg) {
 					return fmt.Errorf("%q is not a valid area name", arg)
 				}
+				args[i] = strings.Replace(strings.ToUpper(arg), "@ALL", "@", 1)
 			}
 		}
 		// Make the requested changes.
@@ -97,7 +98,6 @@ running in noninteractive (--batch) mode, the table is in CSV format.
 			config.C.Bulletins = make(map[string]*config.BulletinConfig)
 		}
 		for _, area := range args {
-			area = strings.ToUpper(area)
 			if bc, ok := config.C.Bulletins[area]; ok {
 				if now && !bc.LastCheck.IsZero() {
 					bc.LastCheck = time.Time{}
