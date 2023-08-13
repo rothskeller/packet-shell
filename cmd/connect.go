@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"net/mail"
 	"os"
 	"os/signal"
 	"strings"
@@ -276,9 +275,9 @@ func (c *connection) sendMessage(filename string, env *envelope.Envelope, msg me
 		return ErrInterrupted
 	}
 	if config.C.TacCall != "" {
-		env.From = (&mail.Address{Name: config.C.TacName, Address: strings.ToLower(config.C.TacCall + "@" + config.C.BBS + ".ampr.org")}).String()
+		env.From = (&envelope.Address{Name: config.C.TacName, Address: strings.ToLower(config.C.TacCall + "@" + config.C.BBS + ".ampr.org")}).String()
 	} else {
-		env.From = (&mail.Address{Name: config.C.OpName, Address: strings.ToLower(config.C.OpCall + "@" + config.C.BBS + ".ampr.org")}).String()
+		env.From = (&envelope.Address{Name: config.C.OpName, Address: strings.ToLower(config.C.OpCall + "@" + config.C.BBS + ".ampr.org")}).String()
 	}
 	env.Date = time.Now()
 	msg.SetOperator(config.C.OpCall, config.C.OpName, false)
@@ -288,7 +287,18 @@ func (c *connection) sendMessage(filename string, env *envelope.Envelope, msg me
 	} else {
 		term.Status("Sending %s...", filename)
 	}
-	if err = c.conn.Send(env.SubjectLine, env.RenderBody(body), env.To...); err != nil {
+	var to []string
+	if addrs, err := envelope.ParseAddressList(env.To); err != nil {
+		return errors.New("invalid To: address list")
+	} else if len(addrs) == 0 {
+		return errors.New("no To: addresses")
+	} else {
+		to = make([]string, len(addrs))
+		for i, a := range addrs {
+			to[i] = a.Address
+		}
+	}
+	if err = c.conn.Send(env.SubjectLine, env.RenderBody(body), to...); err != nil {
 		return fmt.Errorf("JNOS send: %s", err)
 	}
 	if strings.HasSuffix(filename, ".DR") {
@@ -325,9 +335,9 @@ func (c *connection) receiveMessages() (err error) {
 
 // receiveMessage receives a single message with the specified number from the
 // current area, and kills it from the server.  It also sends delivery receipts
-// when appropriate.  It returns false, true if everything's OK; true, true if
-// no message with the specified number exists, and false, false if some other
-// error occurs (in which case an error message will have been printed).
+// when appropriate.  It returns false, nil if everything's OK; true, nil if no
+// message with the specified number exists, and false, !nil if some other error
+// occurs.
 func (c *connection) receiveMessage(area string, msgnum int) (done bool, err error) {
 	if c.checkSigInt() {
 		return false, ErrInterrupted
@@ -345,126 +355,55 @@ func (c *connection) receiveMessage(area string, msgnum int) (done bool, err err
 	if raw == "" {
 		return true, nil
 	}
-	// Parse the message.
-	env, body, err := envelope.ParseRetrieved(raw, config.C.BBS, area)
-	if err != nil {
-		return false, fmt.Errorf("parse retrieved message: %s", err)
-	}
-	if env.Autoresponse {
-		term.Confirm("NOTE: ignoring message %d, which is an autoresponse", msgnum)
+	// Record receipt of the message.
+	lmi, env, msg, oenv, omsg, err := incident.ReceiveMessage(
+		raw, config.C.BBS, area, config.C.MessageID, config.C.OpCall, config.C.OpName)
+	if err == incident.ErrDuplicateReceipt {
+		term.Confirm("NOTE: discarding duplicate receipt for %s", lmi)
 		return false, nil
 	}
-	msg := message.Decode(env.SubjectLine, body)
-	// If it's a receipt, it's handled specially.
-	switch msg.(type) {
-	case *delivrcpt.DeliveryReceipt, *readrcpt.ReadReceipt:
-		if err = c.recordReceipt(env, msg); err != nil {
-			return false, fmt.Errorf("record receipt: %s", err)
+	if err != nil {
+		return false, err
+	}
+	// Received receipts are handled differently than other messages.
+	var rmi string
+	switch msg := msg.(type) {
+	case nil:
+		// ignore message (e.g. autoresponse)
+	case *readrcpt.ReadReceipt:
+		// ignore read receipts
+	case *delivrcpt.DeliveryReceipt:
+		// Display the fact that our message was delivered.
+		if mb := omsg.Base(); mb.FOriginMsgID != nil {
+			rmi = *mb.FOriginMsgID
 		}
+		var li = listItemForMessage(lmi, rmi, oenv)
+		li.Flag = "HAVE RCPT"
+		term.ListMessage(li)
+	default:
+		// Display the newly received message.
+		if mb := msg.Base(); mb.FOriginMsgID != nil {
+			rmi = *mb.FOriginMsgID
+		}
+		var li = listItemForMessage(lmi, rmi, env)
+		term.ListMessage(li)
+		// If we have oenv/omsg, it's a delivery receipt to be sent.
+		if oenv != nil {
+			if err = c.sendMessage(lmi+".DR", oenv, omsg); err != nil {
+				return false, err
+			}
+		}
+	}
+	// Kill the message from the BBS, unless it's a bulletin.  Note that we
+	// intentionally don't check for a sigint here; once we've sent the
+	// delivery receipt, we definitely want to kill the message.
+	if area == "" {
 		term.Status("Removing message %d from BBS...", msgnum)
 		if err = c.conn.Kill(msgnum); err != nil {
 			return false, fmt.Errorf("JNOS kill %d: %s", msgnum, err)
 		}
-		return false, nil
-	}
-	// Assign a local message ID.  Put it, and the opcall/opname, into the
-	// message if it has fields for it.
-	lmi := incident.UniqueMessageID(config.C.MessageID)
-	if mb := msg.Base(); mb.FDestinationMsgID != nil {
-		*mb.FDestinationMsgID = lmi
-	}
-	msg.SetOperator(config.C.OpCall, config.C.OpName, true)
-	// Save the message.
-	var rmi string
-	if b := msg.Base(); b.FOriginMsgID != nil {
-		rmi = *b.FOriginMsgID
-	}
-	if err = incident.SaveMessage(lmi, rmi, env, msg); err != nil {
-		return false, fmt.Errorf("save received %s: %s", lmi, err)
-	}
-	term.ListMessage(listItemForMessage(lmi, rmi, env))
-	if area != "" {
-		// bulletin: no delivery receipt, no kill message
-		return false, nil
-	}
-	// Send delivery receipt.
-	if err = c.sendDeliveryReceipt(lmi, env); err != nil {
-		return false, fmt.Errorf("send delivery receipt for %s: %s", lmi, err)
-	}
-	// Kill message from BBS.  Note that we intentionally don't check for
-	// a sigint here; once we've sent the delivery receipt, we definitely
-	// want to kill the message.
-	term.Status("Removing message %d from BBS...", msgnum)
-	if err = c.conn.Kill(msgnum); err != nil {
-		return false, fmt.Errorf("JNOS kill %d: %s", msgnum, err)
 	}
 	return false, nil
-}
-
-// recordReceipt matches a received receipt with the corresponding outgoing
-// message.
-func (c *connection) recordReceipt(env *envelope.Envelope, msg message.Message) (err error) {
-	var (
-		subject string
-		lmi     string
-		ext     string
-		rmi     string
-	)
-	switch msg := msg.(type) {
-	case *delivrcpt.DeliveryReceipt:
-		subject = msg.MessageSubject
-		ext = ".DR"
-		rmi = msg.LocalMessageID
-	case *readrcpt.ReadReceipt:
-		subject = msg.MessageSubject
-		ext = ".RR"
-	}
-	if subject != "" {
-		lmi = c.subjectToLMI[subject]
-	}
-	if lmi == "" {
-		term.Confirm("NOTE: discarding delivery receipt for unknown message with subject %q", subject)
-		return nil
-	}
-	if _, err = os.Stat(lmi + ext); !errors.Is(err, os.ErrNotExist) {
-		term.Confirm("NOTE: discarding duplicate receipt for %s", lmi)
-		return nil
-	}
-	if err = incident.SaveReceipt(lmi, env, msg); err != nil {
-		return fmt.Errorf("save receipt for %s: %s", lmi, err)
-	}
-	if rmi == "" {
-		return nil // read receipt, nothing more to do
-	}
-	if env, msg, err = incident.ReadMessage(lmi); err != nil {
-		return fmt.Errorf("add RMI: read message %s: %s", lmi, err)
-	}
-	if mb := msg.Base(); mb.FDestinationMsgID != nil {
-		*mb.FDestinationMsgID = rmi
-		if err = incident.SaveMessage(lmi, rmi, env, msg); err != nil {
-			return fmt.Errorf("add RMI: save message %s: %s", lmi, err)
-		}
-	}
-	li := listItemForMessage(lmi, rmi, env)
-	li.Flag = "HAVE RCPT"
-	term.ListMessage(li)
-	return nil
-}
-
-// sendDeliveryReceipt sends (and saves) a delivery receipt for the message.
-func (c *connection) sendDeliveryReceipt(lmi string, renv *envelope.Envelope) (err error) {
-	var (
-		denv envelope.Envelope
-		dr   *delivrcpt.DeliveryReceipt
-	)
-	dr = delivrcpt.New()
-	dr.LocalMessageID = lmi
-	dr.DeliveredTime = time.Now().Format("01/02/2006 15:04")
-	dr.MessageSubject = renv.SubjectLine
-	dr.MessageTo = strings.Join(renv.To, ", ")
-	denv.SubjectLine = dr.EncodeSubject()
-	denv.To = []string{renv.From}
-	return c.sendMessage(lmi+".DR", &denv, dr)
 }
 
 func (c *connection) receiveImmediates() (err error) {

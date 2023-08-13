@@ -61,7 +61,7 @@ run "ics309" again to generate a new one.
 			}
 		}
 		// Generate the file.
-		if _, _, err := incident.GenerateICS309(&incident.ICS309Header{
+		if err := incident.GenerateICS309(&incident.ICS309Header{
 			IncidentName:  config.C.IncidentName,
 			ActivationNum: config.C.ActivationNum,
 			OpStartDate:   config.C.OpStartDate,
