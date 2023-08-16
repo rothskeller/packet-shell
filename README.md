@@ -125,12 +125,9 @@ This will download the code, build it for your system, and install it at
 The packet shell includes support for generating PDF versions of messages and
 ICS-309 logs.  If you don’t need that — for example, if you are using the packet
 shell only in scripts — you can use a version without PDF generation support.
-It is substantially faster and smaller than the full version.
-
-For Linux, Mac OS, or Windows on amd64, follow the instructions above, but
-download the version with `_nopdf_` in the name.  For other operating systems or
-architectures, follow the instructions above, but omit the `-tags packetpdf`
-from the build command.
+It is substantially smaller than the full version and may be a bit faster.  If
+you want that, follow the “For other OSs or architectures” instructions above,
+but omit the `-tags packetpdf` from the build command.
 
 ### Private Forms
 
