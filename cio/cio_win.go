@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 
+	"golang.org/x/sys/windows"
 	"golang.org/x/term"
 )
 
@@ -51,7 +52,7 @@ func rawMode() {
 	windows.SetConsoleMode(windows.Handle(int(os.Stdin.Fd())), 0x0200) // ENABLE_VIRTUAL_TERMINAL_INPUT
 }
 
-func restoreTerminal(st state) {
+func restoreTerminal() {
 	windows.SetConsoleMode(windows.Handle(int(os.Stdin.Fd())), initialStateIn)
 	windows.SetConsoleMode(windows.Handle(int(os.Stdout.Fd())), initialStateOut)
 }
