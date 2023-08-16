@@ -85,7 +85,7 @@ func shell() (err error) {
 		return ErrUsage("usage: packet «command»\n       packet help\n")
 	}
 	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "(devel)" {
-		cio.Welcome(`Packet Shell v%s de KC6RSC.  Type "help" for help.`, info.Main.Version)
+		cio.Welcome(`Packet Shell %s de KC6RSC.  Type "help" for help.`, info.Main.Version)
 	} else {
 		cio.Welcome(`Packet Shell de KC6RSC.  Type "help" for help.`)
 	}
