@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/rothskeller/packet/message"
+	"go.bug.st/serial"
 )
 
 var (
@@ -63,6 +64,7 @@ type BulletinConfig struct {
 
 // C expresses the session configuration.
 var C PacketConfig
+var possiblePorts []string
 
 func init() {
 	C.SerialPort = guessSerialPort()
@@ -88,8 +90,14 @@ func init() {
 // guessSerialPort makes a swag at the device file for the serial port connected
 // to the TNC.  It may very well be wrong and there's no attempt to verify it.
 func guessSerialPort() (port string) {
-	var names []string
-
+	var (
+		names []string
+		err   error
+	)
+	if names, err = serial.GetPortsList(); err == nil && len(names) > 0 {
+		possiblePorts = names
+		return names[len(names)-1]
+	}
 	if runtime.GOOS == "windows" {
 		// The TNC could be attached to any COM port, and there's no way
 		// to know which.  We'll guess COM3 just because it's a fairly
@@ -258,8 +266,9 @@ func makeConfigFields() []*message.Field {
 			},
 		}),
 		message.NewTextField(&message.Field{
-			Label: "TNC Serial Port",
-			Value: &C.SerialPort,
+			Label:   "TNC Serial Port",
+			Value:   &C.SerialPort,
+			Choices: message.Choices(possiblePorts),
 			Presence: func() (message.Presence, string) {
 				if C.connType == "Radio" {
 					return message.PresenceRequired, `when the "BBS Connection" is "Radio"`
