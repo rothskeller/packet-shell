@@ -94,19 +94,19 @@ shell).
 
 **For Linux / amd64:**
 
-1. Download the pre-built `linux-amd64` binary from the [releases page](releases).
+1. Download the pre-built `linux-amd64` binary from the [releases page](../../releases).
 2. Rename it to `packet` and change its mode to `0755`.
 3. Optional: move it to a directory that is on your `$PATH`.
 
 **For Mac OS / amd64:**
 
-1. Download the pre-built `macos-amd64` binary from the [releases page](releases).
+1. Download the pre-built `macos-amd64` binary from the [releases page](../../releases).
 2. Rename it to `packet` and change its mode to `0755`.
 3. Optional: move it to a directory that is on your `$PATH`.
 
 **For Windows / amd64:**
 
-1. Download the pre-built `windows-amd64` binary from the [releases page](releases).
+1. Download the pre-built `windows-amd64` binary from the [releases page](../../releases).
 2. Rename it to `packet.exe`.
 3. Optional: move it to a directory that is on your `$PATH`.
 
