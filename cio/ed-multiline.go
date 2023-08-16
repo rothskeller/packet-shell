@@ -1,4 +1,4 @@
-package terminal
+package cio
 
 import "errors"
 
@@ -7,25 +7,25 @@ func (e *editor) multilineMode() (modefunc, EditResult, error) {
 		lines   []string
 		offsets []int
 	)
-	e.term.clearToEOS()
+	cleanTerminal()
 	defer func() {
-		e.term.move(0, 0)
-		e.term.clearToEOS()
+		move(0, 0)
+		cleanTerminal()
 	}()
 	for {
-		var buf = newScreenBuf(e.term.width - 1)
+		var buf = newScreenBuf(Width - 1)
 		buf.writeAt(0, 0, colorLabel, e.field.Label)
-		lines, offsets = wrap(e.value, e.term.width-5)
+		lines, offsets = wrap(e.value, Width-5)
 		for i, line := range lines {
-			buf.fill(4, e.term.width-5, i+1, colorEntry)
+			buf.fill(4, Width-5, i+1, colorEntry)
 			pre, sel, post := splitOnSelect(line, e.sels-offsets[i], e.sele-offsets[i])
 			buf.writeAt(4, i+1, colorEntry, pre)
 			buf.write(colorSelected, sel)
 			buf.write(colorEntry, post)
 		}
-		e.term.paintBuf(buf)
-		e.term.move(cursorToXY(e.cursor, offsets))
-		switch key := e.term.readKey(); key {
+		paintBuf(buf)
+		move(cursorToXY(e.cursor, offsets))
+		switch key := readKey(); key {
 		case 0:
 			return nil, 0, errors.New("error reading stdin")
 		case 0x01, keyHome: // Ctrl-A
@@ -64,6 +64,7 @@ func (e *editor) multilineMode() (modefunc, EditResult, error) {
 		case 0x04, keyDelete: // Ctrl-D
 			if len(e.value) > e.cursor {
 				e.value = e.value[:e.cursor] + e.value[e.cursor+1:]
+				e.changed = true
 			}
 			e.sels, e.sele = e.cursor, e.cursor
 		case 0x05, keyEnd: // Ctrl-E, End
@@ -108,10 +109,10 @@ func (e *editor) multilineMode() (modefunc, EditResult, error) {
 		case 0x08, 0x7f: // Backspace
 			if e.sels != e.sele {
 				e.value = e.value[:e.sels] + e.value[e.sele:]
-				e.cursor = e.sels
+				e.cursor, e.changed = e.sels, true
 			} else if e.cursor > 0 {
 				e.value = e.value[:e.cursor-1] + e.value[e.cursor:]
-				e.cursor--
+				e.cursor, e.changed = e.cursor-1, true
 			}
 			e.sels, e.sele = e.cursor, e.cursor
 		case 0x09: // Tab
@@ -129,7 +130,7 @@ func (e *editor) multilineMode() (modefunc, EditResult, error) {
 				return nil, ResultNext, nil
 			}
 			e.value = e.value[:e.sels] + "\n" + e.value[e.sele:]
-			e.cursor = e.sels + 1
+			e.cursor, e.changed = e.sels+1, true
 			e.sels, e.sele = e.cursor, e.cursor
 		case 0x0B: // Ctrl-K
 			line := lineContaining(e.cursor, offsets)
@@ -137,7 +138,10 @@ func (e *editor) multilineMode() (modefunc, EditResult, error) {
 			if eol > 0 && e.value[eol-1] == '\n' {
 				eol--
 			}
-			e.value = e.value[:e.cursor] + e.value[eol:]
+			if e.cursor != eol {
+				e.value = e.value[:e.cursor] + e.value[eol:]
+				e.changed = true
+			}
 			e.sels, e.sele = e.cursor, e.cursor
 		case 0x0C: // Ctrl-L
 			return e.multilineMode, 0, nil
@@ -186,7 +190,9 @@ func (e *editor) multilineMode() (modefunc, EditResult, error) {
 			}
 			e.sels = e.cursor
 		case 0x15: // Ctrl-U
-			e.value = ""
+			if e.value != "" {
+				e.value, e.changed = "", true
+			}
 			e.sels, e.sele, e.cursor = 0, 0, 0
 		case 0x1B:
 			return nil, ResultDone, nil
@@ -196,42 +202,11 @@ func (e *editor) multilineMode() (modefunc, EditResult, error) {
 		default:
 			if key >= 0x20 && key <= 0x7e { // Printable character
 				e.value = e.value[:e.sels] + string(key) + e.value[e.sele:]
-				e.cursor = e.sels + 1
+				e.cursor, e.changed = e.sels+1, true
 				e.sels, e.sele = e.cursor, e.cursor
 			}
 		}
 	}
-}
-
-func splitOnSelect(s string, selstart, selend int) (presel, sel, postsel string) {
-	if selstart == selend {
-		return s, "", ""
-	}
-	if selstart >= len(s) {
-		presel = s
-	} else if selstart >= 0 {
-		presel = s[:selstart]
-	}
-	if selstart < len(s) && selend > 0 {
-		if selstart > 0 && selend < len(s) {
-			sel = s[selstart:selend]
-		} else if selstart > 0 {
-			sel = s[selstart:]
-		} else if selend < len(s) {
-			sel = s[:selend]
-		} else {
-			sel = s
-		}
-	}
-	if selend <= 0 {
-		postsel = s
-	} else if selend < len(s) {
-		postsel = s[selend:]
-	}
-	if s != presel+sel+postsel {
-		panic("assert")
-	}
-	return presel, sel, postsel
 }
 
 func cursorToXY(cursor int, offsets []int) (x, y int) {

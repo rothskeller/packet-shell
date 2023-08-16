@@ -1,4 +1,4 @@
-package terminal
+package cio
 
 import (
 	"bytes"
@@ -57,22 +57,22 @@ func (b *screenBuf) fill(x, dx, y, color int) {
 }
 
 // paintBuf updates the contents of the screen to match the provided buffer.
-func (t *styled) paintBuf(n *screenBuf) {
+func paintBuf(n *screenBuf) {
 	// If the screen buffer hasn't been used yet, initialize it.
-	if t.buf == nil {
-		t.buf = newScreenBuf(len(n.lines[0].chars))
+	if buf == nil {
+		buf = newScreenBuf(len(n.lines[0].chars))
 	}
 	// Handle each line separately.
 	for y, nline := range n.lines {
 		// If the screen doesn't have this line, add it to the screen
 		// buffer, and emit a newline at the bottom of the screen to
 		// scroll it up.
-		if y >= len(t.buf.lines) {
-			t.buf.fill(0, len(n.lines[0].chars), y, 0)
-			t.move(0, y-1)
-			t.print(0, "\n")
+		if y >= len(buf.lines) {
+			buf.fill(0, len(n.lines[0].chars), y, 0)
+			move(0, y-1)
+			print(0, "\n")
 		}
-		oline := t.buf.lines[y]
+		oline := buf.lines[y]
 		// Compare the new buffer line and the screen buffer line.
 		var diff = make([]bool, len(nline.chars))
 		for x := range nline.chars {
@@ -102,7 +102,7 @@ func (t *styled) paintBuf(n *screenBuf) {
 			}
 			// Paint the difference.
 			endX++ // change from inclusive end to exclusive end
-			t.paintLine(startX, endX, y, nline)
+			paintLine(startX, endX, y, nline)
 		}
 		// Now that they match, update the screen buffer to
 		// the correct contents.
@@ -111,27 +111,27 @@ func (t *styled) paintBuf(n *screenBuf) {
 	}
 	// Handle the case where the new buffer has fewer lines than the screen
 	// buffer.
-	for len(t.buf.lines) > len(n.lines) {
+	for len(buf.lines) > len(n.lines) {
 		blank := screenBufLine{
-			chars:  bytes.Repeat([]byte{' '}, len(t.buf.lines[0].chars)),
-			colors: make([]uint16, len(t.buf.lines[0].chars)),
+			chars:  bytes.Repeat([]byte{' '}, len(buf.lines[0].chars)),
+			colors: make([]uint16, len(buf.lines[0].chars)),
 		}
-		t.paintLine(0, len(blank.chars), len(t.buf.lines)-1, blank)
-		t.buf.lines = t.buf.lines[:len(t.buf.lines)-1]
+		paintLine(0, len(blank.chars), len(buf.lines)-1, blank)
+		buf.lines = buf.lines[:len(buf.lines)-1]
 	}
 }
 
-func (t *styled) paintLine(startX, endX, y int, line screenBufLine) {
+func paintLine(startX, endX, y int, line screenBufLine) {
 	x := startX
 	for x < endX {
 		// Find the end of the span of characters with the same color.
 		var color = line.colors[x]
 		var spanStart = x
-		t.move(x, y)
+		move(x, y)
 		for x < endX && line.colors[x] == color {
 			x++
 		}
 		// Write those characters with that color.
-		t.printb(int(color), line.chars[spanStart:x])
+		printb(int(color), line.chars[spanStart:x])
 	}
 }

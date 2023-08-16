@@ -7,73 +7,96 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/rothskeller/packet-shell/cio"
 	"github.com/rothskeller/packet/message"
-	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
-func init() {
-	rootCmd.AddCommand(chdirCmd)
+const chdirSlug = `Switch to a different incident directory`
+const chdirHelp = `
+usage: cd [«directory»]
+       mkdir «directory»
+       pwd
+
+When run without an argument, the "cd" (or "chdir" or "pwd") command displays the current incident directory path.
+
+When run with an argument, the "cd" (or "chdir", "mkdir", or "md") command switches to the named incident directory.  If the directory does not exist, it will be created if the command name was "mkdir" or "md".  If the command name was "cd" or "chdir" and the command in running in interactive (--no-script) mode, the user is asked whether to create it.
+`
+
+func cmdChdir(cmdname string, args []string) (err error) {
+	var flags = pflag.NewFlagSet("chdir", pflag.ContinueOnError)
+	flags.Usage = func() {} // we do our own
+	if err = flags.Parse(args); err == pflag.ErrHelp {
+		return cmdHelp([]string{"chdir"})
+	} else if err != nil {
+		cio.Error(err.Error())
+		return usage(chdirHelp)
+	}
+	switch cmdname {
+	case "pwd":
+		if len(args) != 0 {
+			return usage(chdirHelp)
+		}
+	case "cd", "chdir":
+		if len(args) > 1 {
+			return usage(chdirHelp)
+		}
+	case "md", "mkdir":
+		if len(args) != 1 {
+			return usage(chdirHelp)
+		}
+	}
+	if len(args) == 0 {
+		return doPwd()
+	}
+	return doChdir(args[0], cmdname == "md" || cmdname == "mkdir")
 }
 
-var chdirCmd = &cobra.Command{
-	Use:                   "cd [«directory»]",
-	DisableFlagsInUseLine: true,
-	Aliases:               []string{"chdir", "md", "mkdir", "pwd"},
-	Args:                  cobra.MaximumNArgs(1),
-	Short:                 "Switch to a different incident directory",
-	Long: `
-The "cd" (or "chdir") command switches to a different incident directory.
-When run without arguments or as "pwd", it displays the current incident
-directory path.  When run as "mkdir" or "md", it will create the specified
-directory and switch into it.`,
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		if cmd.CalledAs() == "pwd" && len(args) == 1 {
-			return errors.New("cannot specify a directory with pwd")
-		}
-		if len(args) == 0 {
-			var dir string
-			if dir, err = os.Getwd(); err != nil {
-				return err
-			}
-			if nd, err := filepath.EvalSymlinks(dir); err == nil {
-				dir = nd
-			}
-			fmt.Println(dir)
-			return nil
-		}
-		if err = os.Chdir(args[0]); err != nil && !errors.Is(err, os.ErrNotExist) {
+func doPwd() (err error) {
+	var dir string
+	if dir, err = os.Getwd(); err != nil {
+		return err
+	}
+	if nd, err := filepath.EvalSymlinks(dir); err == nil {
+		dir = nd
+	}
+	fmt.Println(dir)
+	return nil
+}
+
+func doChdir(dir string, automake bool) (err error) {
+	if err = os.Chdir(dir); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err == nil {
+		safeDir = safeDirectory()
+		return nil
+	}
+	if !automake {
+		if !cio.InputIsTerm || !cio.OutputIsTerm {
 			return err
 		}
-		if err == nil {
-			safeDir = safeDirectory()
+		var create = "No"
+		_, err = cio.EditField(message.NewRestrictedField(&message.Field{
+			Label:    "Create directory?",
+			Value:    &create,
+			Choices:  message.Choices{"Yes", "No"},
+			EditHelp: `The specified directory does not exist.  If you answer "Yes", it will be created.`,
+		}), 0)
+		if err != nil {
+			return err
+		}
+		if !strings.HasPrefix(create, "Y") {
 			return nil
 		}
-		if ca := cmd.CalledAs(); ca != "md" && ca != "mkdir" {
-			if !term.Human() {
-				return err
-			}
-			var create = "No"
-			_, err = term.EditField(message.NewRestrictedField(&message.Field{
-				Label:    "Create directory?",
-				Value:    &create,
-				Choices:  message.Choices{"Yes", "No"},
-				EditHelp: `The specified directory does not exist.  If you answer "Yes", it will be created.`,
-			}), 0)
-			if err != nil {
-				return err
-			}
-			if !strings.HasPrefix(create, "Y") {
-				return nil
-			}
-		}
-		if err = os.Mkdir(args[0], 0777); err != nil {
-			return fmt.Errorf("creating directory: %s", err)
-		}
-		if err = os.Chdir(args[0]); err != nil {
-			return fmt.Errorf("changing into created directory: %s", err)
-		}
-		// No point in checking safe directory.  We can't have created
-		// an unsafe one.
-		return nil
-	},
+	}
+	if err = os.Mkdir(dir, 0777); err != nil {
+		return fmt.Errorf("creating directory: %s", err)
+	}
+	if err = os.Chdir(dir); err != nil {
+		return fmt.Errorf("changing into created directory: %s", err)
+	}
+	// No point in checking safe directory.  We can't have created an unsafe
+	// one.
+	return nil
 }

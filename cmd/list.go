@@ -4,60 +4,63 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rothskeller/packet-cmd/terminal"
+	"github.com/rothskeller/packet-shell/cio"
 	"github.com/rothskeller/packet/envelope"
 	"github.com/rothskeller/packet/incident"
 	"github.com/rothskeller/packet/message"
 
-	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
-func init() {
-	rootCmd.AddCommand(listCmd)
+const listSlug = `List all messages in current directory`
+const listHelp = `
+usage: packet list
+
+The "list" (or "l") command lists stored messages.  Messages are listed in chronological order.  If standard output is a terminal, messages are listed in a table; otherwise, they are listed in CSV format.
+`
+
+func cmdList(args []string) (err error) {
+	var (
+		remotes map[string]string
+		lmis    []string
+	)
+	var flags = pflag.NewFlagSet("list", pflag.ContinueOnError)
+	flags.Usage = func() {} // we do our own
+	if err = flags.Parse(args); err == pflag.ErrHelp {
+		return cmdHelp([]string{"list"})
+	} else if err != nil {
+		cio.Error(err.Error())
+		return usage(listHelp)
+	}
+	if len(args) != 0 {
+		return usage(listHelp)
+	}
+	// Read the remote message IDs.
+	if remotes, err = incident.RemoteMap(); err != nil {
+		return fmt.Errorf("read remote message IDs: %s", err)
+	}
+	// Now read the list of files again and display those that should be
+	// displayed.
+	if lmis, err = incident.AllLMIs(); err != nil {
+		return fmt.Errorf("read list of messages: %s", err)
+	}
+	for _, lmi := range lmis {
+		env, _, err := incident.ReadMessage(lmi)
+		if err != nil {
+			continue
+		}
+		li := listItemForMessage(lmi, remotes[lmi], env)
+		if !env.IsReceived() && env.IsFinal() && !incident.HasDeliveryReceipt(lmi) {
+			li.Flag = "NO RCPT"
+		}
+		cio.ListMessage(li)
+	}
+	cio.EndMessageList("No messages.")
+	return nil
 }
 
-var listCmd = &cobra.Command{
-	Use:                   "list",
-	Aliases:               []string{"l"},
-	DisableFlagsInUseLine: true,
-	Short:                 "List all messages in current directory",
-	Long: `The "list" command lists stored messages.  Messages are listed in chronological
-order.
-`,
-	Args: cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		var (
-			remotes map[string]string
-			lmis    []string
-			err     error
-		)
-		// Read the remote message IDs.
-		if remotes, err = incident.RemoteMap(); err != nil {
-			return fmt.Errorf("read remote message IDs: %s", err)
-		}
-		// Now read the list of files again and display those that should be
-		// displayed.
-		if lmis, err = incident.AllLMIs(); err != nil {
-			return fmt.Errorf("read list of messages: %s", err)
-		}
-		for _, lmi := range lmis {
-			env, _, err := incident.ReadMessage(lmi)
-			if err != nil {
-				continue
-			}
-			li := listItemForMessage(lmi, remotes[lmi], env)
-			if !env.IsReceived() && env.IsFinal() && !incident.HasDeliveryReceipt(lmi) {
-				li.Flag = "NO RCPT"
-			}
-			term.ListMessage(li)
-		}
-		term.EndMessageList("No messages.")
-		return nil
-	},
-}
-
-func listItemForMessage(lmi, rmi string, env *envelope.Envelope) (li *terminal.ListItem) {
-	li = new(terminal.ListItem)
+func listItemForMessage(lmi, rmi string, env *envelope.Envelope) (li *cio.ListItem) {
+	li = new(cio.ListItem)
 	if env.ReceivedArea != "" {
 		li.Handling = "B"
 	} else {
@@ -100,7 +103,7 @@ func listItemForMessage(lmi, rmi string, env *envelope.Envelope) (li *terminal.L
 	}
 	li.LMI = lmi
 	li.Subject = env.SubjectLine
-	if term.Human() {
+	if cio.OutputIsTerm {
 		if strings.HasPrefix(li.Subject, lmi+"_") {
 			li.Subject = li.Subject[len(lmi)+1:]
 		} else if rmi != "" && strings.HasPrefix(li.Subject, rmi+"_") {

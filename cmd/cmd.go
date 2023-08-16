@@ -6,121 +6,156 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
-	"github.com/rothskeller/packet-cmd/terminal"
+	"github.com/rothskeller/packet-shell/cio"
 	"github.com/rothskeller/packet/incident"
 	"github.com/rothskeller/packet/message"
-
-	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
-var term terminal.Terminal
 var safeDir string
 
-var ErrQuit = errors.New("quit requested")
+func Run(args []string) (ok bool) {
+	var err error
 
-func init() {
-	rootCmd.PersistentFlags().Bool("script", false, "script-friendly input and output")
-	rootCmd.PersistentFlags().Bool("no-script", false, "human-friendly input and output")
-	rootCmd.PersistentFlags().MarkHidden("no-script")
-	rootCmd.MarkFlagsMutuallyExclusive("script", "no-script")
-	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) (err error) {
-		term = terminal.New(cmd)
-		if cmd != rootCmd && safeDir != "" {
-			return errors.New(safeDir)
-		}
-		return nil
-	}
-	rootCmd.RunE = func(*cobra.Command, []string) (err error) {
-		if !term.Human() {
-			Execute([]string{"help"})
-			return
-		}
-		for {
-			var (
-				line     string
-				args     []string
-				in       *os.File
-				out      *os.File
-				saveIn   *os.File
-				saveOut  *os.File
-				saveTerm terminal.Terminal
-			)
-			// If the directory is not safe, give a warning to them
-			// to change it.  Then clear the problem so we don't
-			// trip over it again.
-			if safeDir != "" {
-				term.Confirm(`WARNING: %s  Use the "cd" command to switch to a different directory.`, safeDir)
-				safeDir = ""
-			}
-			// Read and parse the command line.
-			if line, err = term.ReadCommand(); err != nil {
-				if err == io.EOF {
-					line = "quit"
-				} else {
-					return err
-				}
-			}
-			if args, in, out, err = parseCommandLine(line); err != nil {
-				term.Error(err.Error())
-				continue
-			}
-			// Save the old I/O and terminal, and apply the new I/O.
-			// (The new terminal will be applied by PersistentPreRun
-			// above, after flags are parsed.)
-			saveIn, saveOut = os.Stdin, os.Stdout
-			if in != nil {
-				os.Stdin = in
-			}
-			if out != nil {
-				os.Stdout = out
-			}
-			saveTerm = term
-			// Run the command.
-			rootCmd.SetArgs(args)
-			err = rootCmd.Execute()
-			// Restore the old terminal, stdin, and stdout.
-			term.Close()
-			os.Stdin, os.Stdout, term = saveIn, saveOut, saveTerm
-			if in != nil {
-				in.Close()
-			}
-			if out != nil {
-				out.Close()
-			}
-			// Handle the result of the command.
-			if err != nil && err != ErrQuit {
-				term.Error(err.Error())
-			}
-			if err == ErrQuit {
-				return nil
-			}
-		}
-	}
-}
-
-var rootCmd = &cobra.Command{
-	Use:                   "packet",
-	DisableFlagsInUseLine: true,
-	Short:                 "Packet radio message handler",
-	Long: `The "packet" command provides multiple commands for handling packet radio
-messages.  When invoked with a command on the command line, it runs that
-command.  When invoked without any arguments, it starts a shell that allows
-running multiple commands without the "packet" prefix on each.
-`,
-	CompletionOptions: cobra.CompletionOptions{HiddenDefaultCmd: true},
-	SilenceErrors:     true,
-	SilenceUsage:      true,
-}
-
-func Execute(args []string) (err error) {
+	cio.Detect()
 	safeDir = safeDirectory()
-	rootCmd.SetArgs(args)
-	err = rootCmd.Execute()
-	term.Close()
-	return err
+	if len(args) == 0 {
+		err = shell()
+	} else if safeDir != "" {
+		err = errors.New(safeDir)
+	} else {
+		err = run(args)
+	}
+	if err != nil && err != ErrQuit {
+		cio.Error(err.Error())
+		return false
+	}
+	return true
+}
+
+func run(args []string) (err error) {
+	switch args[0] {
+	case "b", "bull", "bulletin", "bulletins":
+		return cmdBulletins(args[1:])
+	case "cd", "chdir", "md", "mkdir", "pwd":
+		return cmdChdir(args[0], args[1:])
+	case "c", "connect":
+		return cmdConnect(args[1:])
+	case "delete":
+		return cmdDelete(args[1:])
+	case "draft":
+		return cmdDraft(args[1:])
+	case "dump":
+		return cmdDump(args[1:])
+	case "e", "edit":
+		return cmdEdit(args[1:])
+	case "h", "help", "--help", "-?":
+		return cmdHelp(args[1:])
+	case "309", "ics309":
+		return cmdICS309(args[1:])
+	case "l", "list":
+		return cmdList(args[1:])
+	case "n", "new":
+		return cmdNew(args[1:])
+	case "pdf":
+		return cmdPDF(args[1:])
+	case "queue":
+		return cmdQueue(args[1:])
+	case "q", "quit", "exit":
+		return ErrQuit
+	case "set":
+		return cmdSet(args[1:])
+	case "s", "show":
+		return cmdShow(args[1:])
+	case "version":
+		return cmdVersion(args[1:])
+	case "config", "script", "types":
+		return cmdHelp(args[1:])
+	default:
+		return fmt.Errorf("no such command %q", args[0])
+	}
+}
+
+func shell() (err error) {
+	if !cio.InputIsTerm || !cio.OutputIsTerm {
+		return ErrUsage("usage: packet «command»\n       packet help\n")
+	}
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "(devel)" {
+		cio.Welcome(`Packet Shell v%s de KC6RSC.  Type "help" for help.`, info.Main.Version)
+	} else {
+		cio.Welcome(`Packet Shell de KC6RSC.  Type "help" for help.`)
+	}
+	if safeDir != "" {
+		cio.Confirm(`WARNING: %s  Use the "cd" command to switch to a different directory.`, safeDir)
+	}
+	for {
+		var (
+			line    string
+			args    []string
+			in      *os.File
+			out     *os.File
+			saveIn  *os.File
+			saveOut *os.File
+		)
+		// If the directory is not safe, give a warning to them to
+		// change it.  Then clear the problem so we don't trip over it
+		// again.
+		if safeDir != "" {
+			cio.Confirm(`WARNING: %s  Use the "cd" command to switch to a different directory.`, safeDir)
+			safeDir = ""
+		}
+		// Read and parse the command line.
+		if line, err = cio.ReadCommand(); err != nil {
+			if err == io.EOF {
+				line = "quit"
+			} else {
+				return err
+			}
+		}
+		if args, in, out, err = parseCommandLine(line); err != nil {
+			cio.Error(err.Error())
+			continue
+		}
+		if len(args) != 0 && args[0] == "packet" {
+			// Just in case they type "packet foo" while already in
+			// the shell.
+			args = args[1:]
+		}
+		if len(args) == 0 {
+			continue
+		}
+		// Save the old stdin and stdout and apply the new ones.
+		saveIn, saveOut = os.Stdin, os.Stdout
+		if in != nil {
+			os.Stdin = in
+		}
+		if out != nil {
+			os.Stdout = out
+		}
+		cio.Detect()
+		// Run the command.
+		err = run(args)
+		// Restore the old stdin and stdout.
+		os.Stdin, os.Stdout = saveIn, saveOut
+		if in != nil {
+			in.Close()
+		}
+		if out != nil {
+			out.Close()
+		}
+		cio.Detect()
+		// Handle the result of the command.
+		if err != nil && err != ErrQuit {
+			cio.Error(err.Error())
+		}
+		if err == ErrQuit {
+			return nil
+		}
+	}
 }
 
 // expandMessageID searches all messages in the current directory for those
@@ -326,6 +361,7 @@ func parseCommandLine(line string) (args []string, in, out *os.File, err error) 
 // surrounded by whitespace.
 func tokenizeLine(line string) (args []string) {
 	var partial string
+	var quoted bool
 
 	for line != "" {
 		idx := strings.IndexAny(line, " \t\f\r\n'\"<>")
@@ -344,30 +380,31 @@ func tokenizeLine(line string) (args []string) {
 			}
 			idx2 += idx + 1 // make it an offset into line
 			partial += line[idx+1 : idx2]
+			quoted = true
 			line = line[idx2+1:]
 			continue
 		}
 		if line[idx] == '>' && idx < len(line)-1 && line[idx+1] == '>' {
-			if partial != "" {
-				args, partial = append(args, partial), ""
+			if partial != "" || quoted {
+				args, partial, quoted = append(args, partial), "", false
 			}
 			args, line = append(args, line[idx:idx+2]), line[idx+2:]
 			continue
 		}
 		if line[idx] == '<' || line[idx] == '>' {
-			if partial != "" {
-				args, partial = append(args, partial), ""
+			if partial != "" || quoted {
+				args, partial, quoted = append(args, partial), "", false
 			}
 			args, line = append(args, line[idx:idx+1]), line[idx+1:]
 			continue
 		}
 		partial += line[:idx]
-		if partial != "" {
-			args, partial = append(args, partial), ""
+		if partial != "" || quoted {
+			args, partial, quoted = append(args, partial), "", false
 		}
 		line = line[idx+1:]
 	}
-	if partial != "" {
+	if partial != "" || quoted {
 		args = append(args, partial)
 	}
 	return args
@@ -406,4 +443,22 @@ func safeDirectory() string {
 	temp.Close()
 	os.Remove(".test-for-writable")
 	return ""
+}
+
+func gaveMutuallyExclusiveFlags(set *pflag.FlagSet, flags ...string) (err error) {
+	var seen bool
+
+	for _, flag := range flags {
+		if f := set.Lookup(flag); f.Changed {
+			if seen {
+				if len(flags) == 2 {
+					return fmt.Errorf("the --%s and --%s flags are incompatible", flags[0], flags[1])
+				} else {
+					return fmt.Errorf("the --%s and --%s flags are incompatible", strings.Join(flags[:len(flags)-1], ", --"), flags[len(flags)-1])
+				}
+			}
+			seen = true
+		}
+	}
+	return nil
 }

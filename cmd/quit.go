@@ -1,18 +1,12 @@
 package cmd
 
-import (
-	"github.com/spf13/cobra"
-)
+import "errors"
 
-func init() {
-	rootCmd.AddCommand(quitCmd)
-}
+const quitSlug = `Quit the packet shell`
+const quitHelp = `
+usage: packet quit
 
-var quitCmd = &cobra.Command{
-	Use:                   "quit",
-	DisableFlagsInUseLine: true,
-	Aliases:               []string{"q", "exit"},
-	Short:                 "Quit the packet shell",
-	Args:                  cobra.NoArgs,
-	RunE:                  func(*cobra.Command, []string) error { return ErrQuit },
-}
+The "quit" (or "q" or "exit") command quits the packet shell.
+`
+
+var ErrQuit = errors.New("quit requested")

@@ -1,4 +1,1 @@
-Rewrite the README to match current usage and leverage help text.  Or maybe get
-rid of it and point people at the help command.
-
-Problems with initial sync with TNC
+Handling new/old fields in edit.

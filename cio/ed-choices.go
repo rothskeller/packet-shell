@@ -1,4 +1,4 @@
-package terminal
+package cio
 
 import "errors"
 
@@ -12,36 +12,36 @@ func (e *editor) choicesMode() (modefunc, EditResult, error) {
 		selline int
 		selcol  int
 	)
-	e.term.clearToEOS()
+	cleanTerminal()
 	defer func() {
-		e.term.move(0, 0)
-		e.term.clearToEOS()
+		move(0, 0)
+		cleanTerminal()
 	}()
 	// Compute the layout for the choices.
 	for lines := 1; xs == nil; lines = lines + 1 {
 		xs, choices = e.choicesLayout(lines)
 	}
 	// Draw the label.
-	e.term.print(colorLabel, setLength(e.field.Label, e.labelWidth+2))
-	entryx = e.term.x
+	print(colorLabel, setLength(e.field.Label, e.labelWidth+2))
+	entryx = curX
 	// Draw each line of choices.
 	for lnum, line := range choices {
-		for lnum > e.term.y {
-			e.term.print(0, "\n")
+		for lnum > curY {
+			print(0, "\n")
 		}
 		for cnum, choice := range line {
 			x := xs[cnum]
 			if choice == "" {
 				x = entryx
 			}
-			e.term.print(0, spaces[:x-e.term.x])
+			print(0, spaces[:x-curX])
 			if choice == "" {
-				e.term.print(colorEntry, spaces[:4])
+				print(colorEntry, spaces[:4])
 			} else if e.value == choice {
 				selline, selcol = lnum, cnum
-				e.term.print(colorSelected, choice)
+				print(colorSelected, choice)
 			} else {
-				e.term.print(0, choice)
+				print(0, choice)
 			}
 		}
 	}
@@ -50,10 +50,10 @@ func (e *editor) choicesMode() (modefunc, EditResult, error) {
 		var newline, newcol = selline, selcol
 
 		// Return the cursor to the start of the entry area.
-		e.term.move(entryx, 0)
-		e.term.showCursor(e.value == "")
+		move(entryx, 0)
+		showCursor(e.value == "")
 		// Read a key and handle it.
-		switch key := e.term.readKey(); key {
+		switch key := readKey(); key {
 		case 0:
 			return nil, 0, errors.New("error reading stdin")
 		case 0x03: // Ctrl-C
@@ -86,9 +86,10 @@ func (e *editor) choicesMode() (modefunc, EditResult, error) {
 			e.showHelp()
 			return e.choicesMode, 0, nil
 		default:
-			if key >= 0x20 && key <= 0x7e && e.value == "" {
+			if key >= 0x20 && key <= 0x7e {
 				// Printable character, switch to oneline mode.
-				e.term.unreadKey(key)
+				unreadKey(key)
+				e.value, e.cursor, e.sels, e.sele = "", 0, 0, 0
 				return e.onelineMode, 0, nil
 			}
 		}
@@ -112,16 +113,16 @@ func (e *editor) choicesMode() (modefunc, EditResult, error) {
 		e.changed = true
 		// If we previously had a selection, redraw it to be unselected.
 		if selline != 0 || selcol != 0 {
-			e.term.move(xs[selcol], selline)
-			e.term.print(0, e.value)
+			move(xs[selcol], selline)
+			print(0, e.value)
 		}
 		// Apply the new selection.
 		selline, selcol, e.value = newline, newcol, choices[newline][newcol]
 		e.sels, e.sele = len(e.value), len(e.value)
 		// If we have a new selection, redraw it to appear selected.
 		if selline != 0 || selcol != 0 {
-			e.term.move(xs[selcol], selline)
-			e.term.print(colorSelected, e.value)
+			move(xs[selcol], selline)
+			print(colorSelected, e.value)
 		}
 	}
 }
@@ -152,13 +153,13 @@ func (e *editor) choicesLayout(linecount int) (xs []int, choices [][]string) {
 		if newx := xs[i/linecount] + len(c); newx > x {
 			x = newx
 		}
-		if x >= e.term.width {
+		if x >= Width {
 			return nil, nil // can't fit with this linecount
 		}
 	}
 	// If we have only one line and it can fit on the entry area line,
 	// adjust for that.
-	if linecount == 1 && x+e.labelWidth+4 < e.term.width {
+	if linecount == 1 && x+e.labelWidth+4 < Width {
 		for i := range xs {
 			xs[i] += e.labelWidth + 4
 		}

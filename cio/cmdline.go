@@ -1,12 +1,22 @@
-package terminal
+package cio
 
 import (
+	"bufio"
 	"errors"
+	"io"
+	"os"
 )
 
 var history []string
 
-func (t *styled) ReadCommand() (line string, err error) {
+func ReadCommand() (line string, err error) {
+	if InputIsTerm {
+		return readCommandTerminal()
+	}
+	return readCommandStdin()
+}
+
+func readCommandTerminal() (line string, err error) {
 	var (
 		cursor       int
 		scroll       int
@@ -16,22 +26,22 @@ func (t *styled) ReadCommand() (line string, err error) {
 	)
 	history = append(history, "")
 	rawMode()
-	t.clearToEOS()
+	cleanTerminal()
 	defer func() {
-		t.move(0, 0)
-		t.clearToEOS()
-		restoreTerminal(t.tstate)
+		move(0, 0)
+		cleanTerminal()
+		restoreTerminal()
 	}()
 	for {
-		var buf = newScreenBuf(t.width - 1)
+		var buf = newScreenBuf(Width - 1)
 		buf.writeAt(0, 0, colorLabel, "packet>")
 		pre, sel, post := splitOnSelect(line[scroll:], selstart-scroll, selend-scroll)
 		buf.writeAt(8, 0, 0, pre)
 		buf.write(colorSelected, sel)
 		buf.write(0, post)
-		t.paintBuf(buf)
-		t.move(8+cursor-scroll, 0)
-		switch key := t.readKey(); key {
+		paintBuf(buf)
+		move(8+cursor-scroll, 0)
+		switch key := readKey(); key {
 		case 0:
 			return "", errors.New("error reading stdin")
 		case 0x01, keyHome: // Ctrl-A
@@ -112,11 +122,11 @@ func (t *styled) ReadCommand() (line string, err error) {
 			selstart, selend = cursor, cursor
 		case 0x0A, 0x0D: // Enter
 			history[len(history)-1] = line
-			t.move(8, 0)
-			t.clearToEOL()
-			t.print(0, line) // might wrap, but that's OK
-			t.print(0, "\n")
-			t.clearToEOS()
+			move(8, 0)
+			clearToEOL()
+			print(0, line) // might wrap, but that's OK
+			print(0, "\n")
+			cleanTerminal()
 			return line, nil
 		case 0x0B: // Ctrl-K
 			line = line[:cursor]
@@ -150,6 +160,19 @@ func (t *styled) ReadCommand() (line string, err error) {
 		}
 		// Change the scrolling if needed to keep the cursor in view.
 		scroll = min(scroll, cursor)
-		scroll = max(scroll, cursor-t.width+9)
+		scroll = max(scroll, cursor-Width+9)
 	}
+}
+
+func readCommandStdin() (string, error) {
+	var scan = bufio.NewScanner(os.Stdin)
+
+	io.WriteString(os.Stdout, "packet> ")
+	if scan.Scan() {
+		return scan.Text(), nil
+	}
+	if err := scan.Err(); err != nil {
+		return "", err
+	}
+	return "", io.EOF
 }

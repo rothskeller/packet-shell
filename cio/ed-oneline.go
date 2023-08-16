@@ -1,4 +1,4 @@
-package terminal
+package cio
 
 import (
 	"errors"
@@ -13,23 +13,23 @@ func (e *editor) onelineMode() (modefunc, EditResult, error) {
 		entryx     int
 		verbatim   bool
 	)
-	e.term.clearToEOS()
+	cleanTerminal()
 	defer func() {
-		e.term.move(0, 0)
-		e.term.clearToEOS()
+		move(0, 0)
+		cleanTerminal()
 	}()
 	entryx = e.labelWidth + 2
 	fieldWidth = e.fieldWidth
-	if fieldWidth == 0 || entryx+fieldWidth >= e.term.width {
-		fieldWidth = e.term.width - entryx - 1
+	if fieldWidth == 0 || entryx+fieldWidth >= Width {
+		fieldWidth = Width - entryx - 1
 	}
 	for {
 		// Draw the label, entry area, and hint.
-		var buf = newScreenBuf(e.term.width - 1)
+		var buf = newScreenBuf(Width - 1)
 		buf.writeAt(0, 0, colorLabel, e.field.Label)
 		buf.fill(entryx, fieldWidth, 0, colorEntry)
-		if len(e.value) < fieldWidth && e.field.EditHint != "" &&
-			entryx+fieldWidth+len(e.field.EditHint)+2 < e.term.width {
+		if len(e.value) <= fieldWidth && e.field.EditHint != "" &&
+			entryx+fieldWidth+len(e.field.EditHint)+2 < Width {
 			buf.writeAt(entryx+fieldWidth+2, 0, colorHint, e.field.EditHint)
 		}
 		// Write the value with selection.
@@ -38,11 +38,11 @@ func (e *editor) onelineMode() (modefunc, EditResult, error) {
 		buf.write(colorSelected, sel)
 		buf.write(colorEntry, post)
 		// Update the screen with the buffer.
-		e.term.paintBuf(buf)
+		paintBuf(buf)
 		// Move the cursor to the proper spot.
-		e.term.move(entryx+e.cursor, 0)
+		move(entryx+e.cursor, 0)
 		// Get a key and handle it.
-		switch key := e.term.readKey(); key {
+		switch key := readKey(); key {
 		case 0:
 			return nil, 0, errors.New("error reading stdin")
 		case 0x01, keyHome: // Ctrl-A
@@ -79,6 +79,7 @@ func (e *editor) onelineMode() (modefunc, EditResult, error) {
 		case 0x04, keyDelete: // Ctrl-D
 			if len(e.value) > e.cursor {
 				e.value = e.value[:e.cursor] + e.value[e.cursor+1:]
+				e.changed = true
 			}
 			e.sels, e.sele = e.cursor, e.cursor
 		case 0x05, keyEnd: // Ctrl-E, End
@@ -115,10 +116,10 @@ func (e *editor) onelineMode() (modefunc, EditResult, error) {
 		case 0x08, 0x7f: // Backspace
 			if e.sels != e.sele {
 				e.value = e.value[:e.sels] + e.value[e.sele:]
-				e.cursor = e.sels
+				e.cursor, e.changed = e.sels, true
 			} else if e.cursor > 0 {
 				e.value = e.value[:e.cursor-1] + e.value[e.cursor:]
-				e.cursor--
+				e.cursor, e.changed = e.cursor-1, true
 			}
 			e.sels, e.sele = e.cursor, e.cursor
 		case 0x09: // Tab
@@ -130,17 +131,21 @@ func (e *editor) onelineMode() (modefunc, EditResult, error) {
 				// Add a literal newline and switch to multiline mode.
 				e.value = e.value[:e.sels] + "\n" + e.value[e.sele:]
 				e.sels++
-				e.cursor, e.sele = e.sels, e.sels
+				e.cursor, e.sele, e.changed = e.sels, e.sels, true
 				return e.multilineMode, 0, nil
 			}
 			return nil, ResultNext, nil
 		case 0x0B: // Ctrl-K
-			e.value = e.value[:e.cursor]
+			if e.cursor < len(e.value) {
+				e.value, e.changed = e.value[:e.cursor], true
+			}
 			e.sels, e.sele = e.cursor, e.cursor
 		case 0x0C: // Ctrl-L
 			return e.onelineMode, 0, nil
 		case 0x15: // Ctrl-U
-			e.value = ""
+			if e.value != "" {
+				e.value, e.changed = "", true
+			}
 			e.sels, e.sele, e.cursor = 0, 0, 0
 		case 0x16: // Ctrl-V
 			verbatim = true
@@ -153,14 +158,14 @@ func (e *editor) onelineMode() (modefunc, EditResult, error) {
 		default:
 			if key >= 0x20 && key <= 0x7e { // Printable character
 				e.value = e.value[:e.sels] + string(key) + e.value[e.sele:]
-				e.cursor = e.sels + 1
+				e.cursor, e.changed = e.sels+1, true
 				e.sels, e.sele = e.cursor, e.cursor
 				if e.sels == len(e.value) {
 					if auto := autocomplete(e.value, e.choices); auto != "" {
 						e.value, e.sele = auto, len(auto)
 					}
 				}
-				if entryx+len(e.value) >= e.term.width {
+				if entryx+len(e.value) >= Width {
 					// No room for value, switch to multiline mode.
 					return e.multilineMode, 0, nil
 				}
@@ -181,25 +186,6 @@ func autocomplete(s string, choices []string) (match string) {
 		}
 	}
 	return match
-}
-func prevword(s string, cur int) int {
-	for cur > 0 && (s[cur] == ' ' || s[cur] == '\n') {
-		cur--
-	}
-	for cur > 0 && s[cur-1] != ' ' && s[cur] != '\n' {
-		cur--
-	}
-	return cur
-}
-func nextword(s string, cur int) int {
-	l := len(s)
-	for cur < l && (s[cur] == ' ' || s[cur] == '\n') {
-		cur++
-	}
-	for cur < l && s[cur] != ' ' && s[cur] != '\n' {
-		cur++
-	}
-	return cur
 }
 func diffindex(a, b string) int {
 	for i := 0; i < len(a) && i < len(b); i++ {

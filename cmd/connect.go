@@ -8,7 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rothskeller/packet-cmd/config"
+	"github.com/rothskeller/packet-shell/cio"
+	"github.com/rothskeller/packet-shell/config"
 	"github.com/rothskeller/packet/envelope"
 	"github.com/rothskeller/packet/incident"
 	"github.com/rothskeller/packet/jnos"
@@ -18,17 +19,20 @@ import (
 	"github.com/rothskeller/packet/xscmsg/delivrcpt"
 	"github.com/rothskeller/packet/xscmsg/readrcpt"
 
-	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
-func init() {
-	rootCmd.AddCommand(connectCmd)
-	connectCmd.Flags().BoolP("send", "s", false, "send queued messages")
-	connectCmd.Flags().BoolP("receive", "r", false, "receive incoming messages")
-	connectCmd.Flags().BoolP("immediate", "i", false, "immediate messages only")
-}
+const connectSlug = `Connect to the BBS to send and/or receive messages`
+const connectHelp = `
+usage: packet connect [flags]
+  -i, --immediate  ⇥immediate messages only
+  -r, --receive    ⇥receiving incoming messages
+  -s, --send       ⇥send queued messages
 
-var ErrInterrupted = errors.New("connection interrupted by Ctrl-C")
+The "connect" (or "c") command makes a connection to the BBS and sends and/or receives messages.  With the --send flag, it sends queued outgoing messages; with the --receive flag, it receives incoming messages; with both or neither, it does both.  With the --immediate flag, only immediate messages are sent and/or received.
+
+When receiving messages without the --immediate flag, any scheduled bulletin checks are performed as well.  (See the "packet bulletins" command for scheduling of bulletin checks.)
+`
 
 type connection struct {
 	tosend        []string
@@ -40,85 +44,79 @@ type connection struct {
 	conn          *jnos.Conn
 }
 
-var connectCmd = &cobra.Command{
-	Use:                   "connect [--send] [--receive] [--immediate]",
-	DisableFlagsInUseLine: true,
-	Aliases:               []string{"c"},
-	SuggestFor:            []string{"send", "receive"},
-	Short:                 "Connect to the BBS to send and/or receive messages",
-	Long: `
-The "connect" command makes a connection to the BBS and sends and/or receives
-messages.  With the --send flag, it sends queued outgoing messages; with the
---receive flag, it receives incoming messages; with both or neither, it does
-both.  With the --immediate flag, only immediate messages are sent and/or
-received.
+var ErrInterrupted = errors.New("connection interrupted by Ctrl-C")
 
-When receiving messages without the --immediate flag, any scheduled bulletin
-checks are performed as well.  (See the "packet bulletins" command for
-scheduling of bulletin checks.)
-`,
-	Args: cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		var (
-			sendlevel int
-			conn      connection
-		)
-		if f, _ := cmd.Flags().GetBool("send"); f {
-			sendlevel = 1
-		}
-		if f, _ := cmd.Flags().GetBool("receive"); f {
-			conn.rcvlevel = 1
-		}
-		if sendlevel == 0 && conn.rcvlevel == 0 {
-			sendlevel, conn.rcvlevel = 1, 1
-		}
-		if f, _ := cmd.Flags().GetBool("immediate"); f {
-			sendlevel, conn.rcvlevel = sendlevel*2, conn.rcvlevel*2
-		}
-		// If we're checking bulletins, make a map of the areas to check based
-		// on time elapsed and requested frequency.
-		if conn.rcvlevel == 1 {
-			conn.areas = make(map[string]*config.BulletinConfig)
-			for area, bc := range config.C.Bulletins {
-				if time.Since(bc.LastCheck) >= bc.Frequency {
-					conn.areas[area] = bc
-				}
+func cmdConnect(args []string) (err error) {
+	var (
+		send      bool
+		receive   bool
+		immediate bool
+		sendlevel int
+		conn      connection
+		flags     = pflag.NewFlagSet("connect", pflag.ContinueOnError)
+	)
+	flags.BoolVarP(&send, "send", "s", false, "send queued messages")
+	flags.BoolVarP(&receive, "receive", "r", false, "receive incoming messages")
+	flags.BoolVarP(&immediate, "immediate", "i", false, "immediate messages only")
+	flags.Usage = func() {} // we do our own
+	if err = flags.Parse(args); err == pflag.ErrHelp {
+		return cmdHelp([]string{"connect"})
+	} else if err != nil {
+		cio.Error(err.Error())
+		return usage(connectHelp)
+	}
+	if flags.NArg() != 0 {
+		return usage(connectHelp)
+	}
+	if send {
+		sendlevel = 1
+	}
+	if receive {
+		conn.rcvlevel = 1
+	}
+	if sendlevel == 0 && conn.rcvlevel == 0 {
+		sendlevel, conn.rcvlevel = 1, 1
+	}
+	if immediate {
+		sendlevel, conn.rcvlevel = sendlevel*2, conn.rcvlevel*2
+	}
+	// If we're checking bulletins, make a map of the areas to check based
+	// on time elapsed and requested frequency.
+	if conn.rcvlevel == 1 {
+		conn.areas = make(map[string]*config.BulletinConfig)
+		for area, bc := range config.C.Bulletins {
+			if time.Since(bc.LastCheck) >= bc.Frequency {
+				conn.areas[area] = bc
 			}
 		}
-		// Scan through all existing messages, gathering data that we will need
-		// to handle the connection
-		conn.tosend, conn.subjectToLMI, conn.haveBulletins = preConnectScan(sendlevel, conn.areas)
-		// Do we have anything to do?
-		if len(conn.tosend) == 0 && conn.rcvlevel == 0 {
-			term.Confirm("Nothing to send.")
-			return nil
-		}
-		if !haveConnectConfig() && term.Human() {
-			term.Confirm("Please provide necessary configuration settings for connection:")
-			saveTerm := term
-			rootCmd.SetArgs([]string{"edit", "config"})
-			err = rootCmd.Execute()
-			term.Close()
-			term = saveTerm
-			if err != nil {
-				return err
-			}
-		}
-		if !haveConnectConfig() {
-			term.Error("missing necessary configuration settings")
-		}
-		// Run the connection.
-		defer term.Status("")
-		if err := conn.run(); err != nil {
+	}
+	// Scan through all existing messages, gathering data that we will need
+	// to handle the connection
+	conn.tosend, conn.subjectToLMI, conn.haveBulletins = preConnectScan(sendlevel, conn.areas)
+	// Do we have anything to do?
+	if len(conn.tosend) == 0 && conn.rcvlevel == 0 {
+		return errors.New("nothing to send")
+	}
+	if !haveConnectConfig() && cio.InputIsTerm && cio.OutputIsTerm {
+		cio.Confirm("Please provide necessary configuration settings for connection:")
+		if err = run([]string{"edit", "config"}); err != nil {
 			return err
 		}
-		// Save the configuration with new LastCheck times for the bulletin
-		// areas.
-		if len(conn.areas) != 0 {
-			config.SaveConfig()
-		}
-		return nil
-	},
+	}
+	if !haveConnectConfig() {
+		return errors.New("missing necessary configuration settings")
+	}
+	// Run the connection.
+	defer cio.Status("")
+	if err := conn.run(); err != nil {
+		return err
+	}
+	// Save the configuration with new LastCheck times for the bulletin
+	// areas.
+	if len(conn.areas) != 0 {
+		config.SaveConfig()
+	}
+	return nil
 }
 
 // preConnectScan scans all existing messages gathering information needed prior
@@ -194,11 +192,11 @@ func haveConnectConfig() bool {
 	return true
 }
 
-// doConnect connects to the BBS and performs the desired operations.  It sends
-// all of the messages whose filenames are in the tosend array.  If rcvlevel is
-// 2, it receives immediate messages.  If rcvlevel is 1, it receives all
-// incoming messages.  If rcvlevel is 0, it does not receive any messages.  All
-// bulletin areas listed in areas are checked for new bulletins.
+// run connects to the BBS and performs the desired operations.  It sends all of
+// the messages whose filenames are in the tosend array.  If rcvlevel is 2, it
+// receives immediate messages.  If rcvlevel is 1, it receives all incoming
+// messages.  If rcvlevel is 0, it does not receive any messages.  All bulletin
+// areas listed in areas are checked for new bulletins.
 func (c *connection) run() (err error) {
 	var (
 		mailbox string
@@ -219,7 +217,7 @@ func (c *connection) run() (err error) {
 	} else {
 		mailbox = config.C.OpCall
 	}
-	term.Status("Connecting to %s@%s...", mailbox, config.C.BBS)
+	cio.Status("Connecting to %s@%s...", mailbox, config.C.BBS)
 	if strings.IndexByte(config.C.BBSAddress, ':') >= 0 { // internet connection
 		c.conn, err = telnet.Connect(config.C.BBSAddress, mailbox, config.C.Password, log)
 	} else { // radio connection
@@ -229,7 +227,7 @@ func (c *connection) run() (err error) {
 		return fmt.Errorf("JNOS connect: %s", err)
 	}
 	defer func() {
-		term.Status("\r\033[KClosing connection...")
+		cio.Status("Closing connection...")
 		if err2 := c.conn.Close(); err == nil && err2 != nil {
 			err = fmt.Errorf("JNOS close: %s", err2)
 		}
@@ -250,7 +248,7 @@ func (c *connection) run() (err error) {
 	if err = c.receiveBulletins(); err != nil {
 		return fmt.Errorf("receive bulletins: %s", err)
 	}
-	term.EndMessageList("No messages sent or received.")
+	cio.EndMessageList("No messages sent or received.")
 	return nil
 }
 
@@ -283,9 +281,9 @@ func (c *connection) sendMessage(filename string, env *envelope.Envelope, msg me
 	msg.SetOperator(config.C.OpCall, config.C.OpName, false)
 	body := msg.EncodeBody()
 	if strings.HasSuffix(filename, ".DR") {
-		term.Status("Sending delivery receipt for %s...", filename[:len(filename)-3])
+		cio.Status("Sending delivery receipt for %s...", filename[:len(filename)-3])
 	} else {
-		term.Status("Sending %s...", filename)
+		cio.Status("Sending %s...", filename)
 	}
 	var to []string
 	if addrs, err := envelope.ParseAddressList(env.To); err != nil {
@@ -306,12 +304,12 @@ func (c *connection) sendMessage(filename string, env *envelope.Envelope, msg me
 			return fmt.Errorf("save receipt %s: %s", filename, err)
 		}
 	} else {
-		if err = incident.SaveMessage(filename, "", env, msg); err != nil {
+		if err = incident.SaveMessage(filename, "", env, msg, false); err != nil {
 			return fmt.Errorf("save message %s: %s", filename, err)
 		}
 	}
 	if !strings.HasSuffix(filename, ".DR") {
-		term.ListMessage(listItemForMessage(filename, "", env))
+		cio.ListMessage(listItemForMessage(filename, "", env))
 	}
 	return nil
 }
@@ -339,14 +337,16 @@ func (c *connection) receiveMessages() (err error) {
 // message with the specified number exists, and false, !nil if some other error
 // occurs.
 func (c *connection) receiveMessage(area string, msgnum int) (done bool, err error) {
+	var rmi string
+
 	if c.checkSigInt() {
 		return false, ErrInterrupted
 	}
 	// Read the message.
 	if area != "" {
-		term.Status("Reading message %d in %s...", msgnum, area)
+		cio.Status("Reading message %d in %s...", msgnum, area)
 	} else {
-		term.Status("Reading message %d...", msgnum)
+		cio.Status("Reading message %d...", msgnum)
 	}
 	raw, err := c.conn.Read(msgnum)
 	if err != nil {
@@ -359,34 +359,34 @@ func (c *connection) receiveMessage(area string, msgnum int) (done bool, err err
 	lmi, env, msg, oenv, omsg, err := incident.ReceiveMessage(
 		raw, config.C.BBS, area, config.C.MessageID, config.C.OpCall, config.C.OpName)
 	if err == incident.ErrDuplicateReceipt {
-		term.Confirm("NOTE: discarding duplicate receipt for %s", lmi)
-		return false, nil
+		cio.Confirm("NOTE: discarding duplicate receipt for %s", lmi)
+		goto KILL
 	}
 	if err != nil {
 		return false, err
 	}
 	// Received receipts are handled differently than other messages.
-	var rmi string
 	switch msg := msg.(type) {
 	case nil:
 		// ignore message (e.g. autoresponse)
 	case *readrcpt.ReadReceipt:
 		// ignore read receipts
 	case *delivrcpt.DeliveryReceipt:
-		// Display the fact that our message was delivered.
-		if mb := omsg.Base(); mb.FOriginMsgID != nil {
-			rmi = *mb.FOriginMsgID
+		if lmi == "" {
+			cio.Confirm("NOTE: discarding receipt for unknown message %q", msg.MessageSubject)
+		} else {
+			// Display the fact that our message was delivered.
+			var li = listItemForMessage(lmi, msg.LocalMessageID, oenv)
+			li.Flag = "HAVE RCPT"
+			cio.ListMessage(li)
 		}
-		var li = listItemForMessage(lmi, rmi, oenv)
-		li.Flag = "HAVE RCPT"
-		term.ListMessage(li)
 	default:
 		// Display the newly received message.
 		if mb := msg.Base(); mb.FOriginMsgID != nil {
 			rmi = *mb.FOriginMsgID
 		}
 		var li = listItemForMessage(lmi, rmi, env)
-		term.ListMessage(li)
+		cio.ListMessage(li)
 		// If we have oenv/omsg, it's a delivery receipt to be sent.
 		if oenv != nil {
 			if err = c.sendMessage(lmi+".DR", oenv, omsg); err != nil {
@@ -394,11 +394,12 @@ func (c *connection) receiveMessage(area string, msgnum int) (done bool, err err
 			}
 		}
 	}
+KILL:
 	// Kill the message from the BBS, unless it's a bulletin.  Note that we
 	// intentionally don't check for a sigint here; once we've sent the
 	// delivery receipt, we definitely want to kill the message.
 	if area == "" {
-		term.Status("Removing message %d from BBS...", msgnum)
+		cio.Status("Removing message %d from BBS...", msgnum)
 		if err = c.conn.Kill(msgnum); err != nil {
 			return false, fmt.Errorf("JNOS kill %d: %s", msgnum, err)
 		}
@@ -429,7 +430,7 @@ func (c *connection) immediateMessageNumbers() (nums []int, err error) {
 	if c.checkSigInt() {
 		return nil, ErrInterrupted
 	}
-	term.Status("Getting list of messages in inbox...")
+	cio.Status("Getting list of messages in inbox...")
 	list, err := c.conn.List("")
 	if err != nil {
 		return nil, fmt.Errorf("JNOS list: %s", err)
@@ -458,7 +459,11 @@ func (c *connection) receiveBulletins() (err error) {
 				return fmt.Errorf("message number %d went missing", msgnum)
 			}
 		}
-		bc.LastCheck = time.Now()
+		if bc.Frequency == 0 {
+			delete(config.C.Bulletins, area)
+		} else {
+			bc.LastCheck = time.Now()
+		}
 	}
 	return nil
 }
@@ -476,14 +481,14 @@ func (c *connection) bulletinsToFetch(area string, have map[string]bool) (nums [
 	} else {
 		areaonly = area
 	}
-	term.Status("Moving to %s...", areaonly)
+	cio.Status("Moving to %s...", areaonly)
 	if err := c.conn.SetArea(areaonly); err != nil {
 		return nil, fmt.Errorf("JNOS area %s: %s", areaonly, err)
 	}
 	if c.checkSigInt() {
 		return nil, ErrInterrupted
 	}
-	term.Status("Getting list of messages for %s...", area)
+	cio.Status("Getting list of messages for %s...", area)
 	list, err := c.conn.List(to)
 	if err != nil {
 		return nil, fmt.Errorf("JNOS list %s: %s", area, err)
