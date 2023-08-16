@@ -423,7 +423,7 @@ func safeDirectory() string {
 	if np, err := filepath.EvalSymlinks(cwd); err == nil {
 		cwd = np
 	}
-	if home = os.Getenv("HOME"); home != "" {
+	if home, err = os.UserHomeDir(); err == nil && home != "" {
 		if cwd == home {
 			return `The current directory is the user's home directory.  This is not a suitable location for message storage because each incident should have its own directory.`
 		}
