@@ -106,6 +106,9 @@ shell).
 
 **For Windows / amd64:**
 
+NOTE:  The packet shell is compatible with Windows 10 (version 1511) or later.
+It will not work on any earlier version of Windows.
+
 1. Download the pre-built `windows-amd64` binary from the [releases page](../../releases).
 2. Rename it to `packet.exe`.
 3. Optional: move it to a directory that is on your `$PATH`.
