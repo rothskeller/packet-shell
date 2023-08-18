@@ -7,8 +7,10 @@ import (
 	"strings"
 )
 
+var SuppressStatus bool
+
 func Status(f string, args ...any) {
-	if OutputIsTerm {
+	if OutputIsTerm && !SuppressStatus {
 		clearStatus()
 		if f != "" {
 			var s = f

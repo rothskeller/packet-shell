@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"strings"
@@ -28,6 +29,7 @@ usage: packet connect [flags]
   -i, --immediate  ⇥immediate messages only
   -r, --receive    ⇥receiving incoming messages
   -s, --send       ⇥send queued messages
+  -v, --verbose    ⇥show BBS conversation
 
 The "connect" (or "c") command makes a connection to the BBS and sends and/or receives messages.  With the --send flag, it sends queued outgoing messages; with the --receive flag, it receives incoming messages; with both or neither, it does both.  With the --immediate flag, only immediate messages are sent and/or received.
 
@@ -53,6 +55,7 @@ func cmdConnect(args []string) (err error) {
 		send      bool
 		receive   bool
 		immediate bool
+		verbose   bool
 		sendlevel int
 		conn      connection
 		flags     = pflag.NewFlagSet("connect", pflag.ContinueOnError)
@@ -60,6 +63,7 @@ func cmdConnect(args []string) (err error) {
 	flags.BoolVarP(&send, "send", "s", false, "send queued messages")
 	flags.BoolVarP(&receive, "receive", "r", false, "receive incoming messages")
 	flags.BoolVarP(&immediate, "immediate", "i", false, "immediate messages only")
+	flags.BoolVarP(&verbose, "verbose", "v", false, "show BBS conversation")
 	flags.Usage = func() {} // we do our own
 	if err = flags.Parse(args); err == pflag.ErrHelp {
 		return cmdHelp([]string{"connect"})
@@ -110,7 +114,7 @@ func cmdConnect(args []string) (err error) {
 	}
 	// Run the connection.
 	defer cio.Status("")
-	if err := conn.run(); err != nil {
+	if err := conn.run(verbose); err != nil {
 		return err
 	}
 	// Save the configuration.  It may have new unread messages or new
@@ -197,20 +201,28 @@ func haveConnectConfig() bool {
 // receives immediate messages.  If rcvlevel is 1, it receives all incoming
 // messages.  If rcvlevel is 0, it does not receive any messages.  All bulletin
 // areas listed in areas are checked for new bulletins.
-func (c *connection) run() (err error) {
+func (c *connection) run(verbose bool) (err error) {
 	var (
 		mailbox string
-		log     *os.File
+		logfile *os.File
+		log     io.Writer
 	)
 	// Intercept ^C so we can close the connection gracefully.
 	c.sigintch = make(chan os.Signal, 10)
 	signal.Notify(c.sigintch, os.Interrupt)
 	defer c.drainSigInt()
 	// Append to the log file.
-	if log, err = os.OpenFile("packet.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666); err != nil {
+	if logfile, err = os.OpenFile("packet.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666); err != nil {
 		return err
 	}
-	defer log.Close()
+	defer logfile.Close()
+	if verbose {
+		log = io.MultiWriter(logfile, os.Stdout)
+		cio.SuppressStatus = true
+		defer func() { cio.SuppressStatus = false }()
+	} else {
+		log = logfile
+	}
 	// Connect to the BBS.
 	if config.C.TacCall != "" {
 		mailbox = config.C.TacCall
