@@ -276,8 +276,13 @@ func makeConfigFields() []*message.Field {
 					return message.PresenceOptional, ""
 				}
 			},
-			TableValue: message.TableOmit,
-			EditHelp:   `This is the serial port for communications with the TNC.  On Windows, this will be COM#, where # is some number.  On other systems, this will be a filename of a character device file in /dev.  It is required when the "BBS Connection" is "Radio".`,
+			TableValue: func(f *message.Field) string {
+				if C.connType != "Radio" {
+					return ""
+				}
+				return C.SerialPort
+			},
+			EditHelp: `This is the serial port for communications with the TNC.  On Windows, this will be COM#, where # is some number.  On other systems, this will be a filename of a character device file in /dev.  It is required when the "BBS Connection" is "Radio".`,
 			EditApply: func(f *message.Field, s string) {
 				s = strings.TrimSpace(s)
 				if runtime.GOOS == "windows" {
