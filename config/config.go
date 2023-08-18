@@ -408,6 +408,7 @@ func makeConfigFields() []*message.Field {
 				}
 			},
 			TableValue: message.TableOmit,
+			HideValue:  true,
 			EditHelp:   `This is the password for logging into the BBS server using the "Tactical Call Sign" (if provided) or "Operator Call Sign".  It is required when the "BBS Connection" is "Internet".  Note that this password will be saved in clear text in the local "packet.conf" file; make sure to protect it appropriately.`,
 		}),
 		message.NewMessageNumberField(&message.Field{

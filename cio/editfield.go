@@ -126,3 +126,7 @@ func (e *editor) showHelp() {
 	print(0, "\n")
 	cleanTerminal()
 }
+
+func hideValue(s string) string {
+	return strings.Repeat("*", len(s))
+}

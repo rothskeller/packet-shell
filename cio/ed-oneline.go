@@ -33,7 +33,11 @@ func (e *editor) onelineMode() (modefunc, EditResult, error) {
 			buf.writeAt(entryx+fieldWidth+2, 0, colorHint, e.field.EditHint)
 		}
 		// Write the value with selection.
-		pre, sel, post := splitOnSelect(e.value, e.sels, e.sele)
+		var value = e.value
+		if e.field.HideValue {
+			value = hideValue(value)
+		}
+		pre, sel, post := splitOnSelect(value, e.sels, e.sele)
 		buf.writeAt(entryx, 0, colorEntry, pre)
 		buf.write(colorSelected, sel)
 		buf.write(colorEntry, post)

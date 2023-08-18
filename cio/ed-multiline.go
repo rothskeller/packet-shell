@@ -15,7 +15,11 @@ func (e *editor) multilineMode() (modefunc, EditResult, error) {
 	for {
 		var buf = newScreenBuf(Width - 1)
 		buf.writeAt(0, 0, colorLabel, e.field.Label)
-		lines, offsets = wrap(e.value, Width-5)
+		var value = e.value
+		if e.field.HideValue {
+			value = hideValue(value)
+		}
+		lines, offsets = wrap(value, Width-5)
 		for i, line := range lines {
 			buf.fill(4, Width-5, i+1, colorEntry)
 			pre, sel, post := splitOnSelect(line, e.sels-offsets[i], e.sele-offsets[i])

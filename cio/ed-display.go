@@ -6,13 +6,18 @@ import (
 
 func (e *editor) display() {
 	var (
+		value   string
 		linelen int
 		lines   []string
 		indent  string
 	)
 	print(colorLabel, e.field.Label)
+	value = strings.TrimRight(e.value, "\n")
+	if e.field.HideValue {
+		value = hideValue(value)
+	}
 	// Find the length of the longest line in the value.
-	lines = strings.Split(strings.TrimRight(e.value, "\n"), "\n")
+	lines = strings.Split(value, "\n")
 	for _, line := range lines {
 		linelen = max(linelen, len(line))
 	}
@@ -20,7 +25,7 @@ func (e *editor) display() {
 		print(0, spaces[:e.labelWidth+2-len(e.field.Label)])
 		indent = spaces[:e.labelWidth+2]
 	} else {
-		lines, _ = wrap(strings.TrimRight(e.value, "\n"), Width-5)
+		lines, _ = wrap(value, Width-5)
 		print(0, "\n    ")
 		indent = spaces[:4]
 	}
