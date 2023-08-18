@@ -227,7 +227,7 @@ func makeConfigFields() []*message.Field {
 			EditHelp: `This is the name of the tactical station being operated.  It is filled into various forms.`,
 		}),
 		message.NewRestrictedField(&message.Field{
-			Label:      "BBS Connnection",
+			Label:      "BBS Connection",
 			Value:      &C.connType,
 			Choices:    message.Choices{"Radio", "Internet"},
 			Presence:   message.Required,
@@ -317,6 +317,7 @@ func makeConfigFields() []*message.Field {
 			TableValue: message.TableOmit,
 			EditHelp:   `This is the Internet hostname of the BBS.  It must start with the FCC call sign of the BBS.  It is required when the "BBS Connection" is "Internet".`,
 			EditApply: func(f *message.Field, s string) {
+				C.hostname = strings.TrimSpace(s)
 				C.BBSAddress = C.hostname + ":" + C.port
 				if idx := strings.IndexFunc(C.hostname, func(r rune) bool {
 					return (r < '0' || r > '9') && (r < 'A' || r > 'Z') && (r < 'a' || r > 'z')
@@ -355,6 +356,7 @@ func makeConfigFields() []*message.Field {
 			TableValue: message.TableOmit,
 			EditHelp:   `This is the TCP/IP port number for the Internet connection to the BBS server.  It is a number between 1024 and 65535.  It is required when the "BBS Connection" is "Internet".`,
 			EditApply: func(f *message.Field, s string) {
+				C.port = strings.TrimSpace(s)
 				C.BBSAddress = C.hostname + ":" + C.port
 				if idx := strings.IndexFunc(C.hostname, func(r rune) bool {
 					return (r < '0' || r > '9') && (r < 'A' || r > 'Z') && (r < 'a' || r > 'z')
