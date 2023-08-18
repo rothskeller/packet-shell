@@ -105,7 +105,7 @@ func doBulletins(frequency time.Duration, stop, now bool, areas []string) (err e
 			if now {
 				config.C.Bulletins[area] = &config.BulletinConfig{}
 				changed = true
-			} else if frequency != 0 {
+			} else if frequency != 0 && !stop {
 				config.C.Bulletins[area] = &config.BulletinConfig{Frequency: frequency}
 				changed = true
 			}
