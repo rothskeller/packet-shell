@@ -32,6 +32,8 @@ usage: packet connect [flags]
 The "connect" (or "c") command makes a connection to the BBS and sends and/or receives messages.  With the --send flag, it sends queued outgoing messages; with the --receive flag, it receives incoming messages; with both or neither, it does both.  With the --immediate flag, only immediate messages are sent and/or received.
 
 When receiving messages without the --immediate flag, any scheduled bulletin checks are performed as well.  (See the "packet bulletins" command for scheduling of bulletin checks.)
+
+The "connect" command lists all messages sent and received, except for receipts.  Run "packet help list" for details of the output format.
 `
 
 type connection struct {

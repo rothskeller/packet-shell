@@ -17,6 +17,37 @@ const listHelp = `
 usage: packet list
 
 The "list" (or "l") command lists stored messages.  Messages are listed in chronological order.  If standard output is a terminal, messages are listed in a table; otherwise, they are listed in CSV format.
+
+The contents of the list vary based on the message type.  For received bulletins:
+  TIME     ⇥is the time we retrieved it
+  FROM     ⇥is the bulletin area we retrieved it from
+  LOCAL ID ⇥is the local message ID assigned to it
+  TO       ⇥is empty
+For received private messages:
+  TIME     ⇥is the time we retrieved it
+  FROM     ⇥is the origin message ID, if known, otherwise the From: address
+  LOCAL ID ⇥is the local (i.e., destination) message ID assigned to it
+  TO       ⇥is empty
+For sent messages:
+  TIME     ⇥is the time we sent it
+  FROM     ⇥is empty
+  LOCAL ID ⇥is the local (i.e., origin) message ID assigned to it
+  TO       ⇥is the destination message ID, if we've received a receipt for it, otherwise the To: address
+For unsent outgoing messages:
+  TIME     ⇥is empty
+  FROM     ⇥is empty
+  LOCAL ID ⇥is the local (i.e., origin) message ID assigned to it
+  TO       ⇥is the To: address
+In all cases, the SUBJECT column contains the subject of the message.  If the subject starts with a message ID that appears in the FROM, LOCAL ID, or TO column, it is omitted from the SUBJECT column for brevity.
+
+Messages are color-coded in the list, when displayed on a capable terminal.  Bulletins are in cyan, immediate messages are in red, and priority messages are in yellow.
+
+Several markers can appear in the list for special cases.  These appear in the FLAGS column in CSV output, or in an otherwise unused column in terminal output.
+  DRAFT   ⇥indicates an unsent message that is not queued for sending
+  QUEUE   ⇥indicates an unsent message that is queued for sending
+  NO RCPT ⇥indicates a sent message for which no delivery receipt has been received
+
+The "connect" command will sometimes show sent messages with a destination message ID on a green background.  This is a transient indication that we just received a delivery receipt for the message.
 `
 
 func cmdList(args []string) (err error) {

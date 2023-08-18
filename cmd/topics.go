@@ -31,6 +31,8 @@ Password
     Internet connections: This is the password to use to log into the BBS.  The "packet" commands will log in using the "Tactical Call Sign" if given, otherwise the "Operator Call Sign".  Note that this password is stored in clear text in the "packet.conf" file; make sure to protect it properly.
 Message Numbering
     This is the message number of the first message; subsequent messages will follow the same pattern with increasing sequence numbers.
+Default Destination
+    This is the address list to be added to the "To" field of any new message.
 Default Body Text
     This is text to be added to the body text field of any new message, e.g., "**** This is drill traffic ****".
 Incident Name
