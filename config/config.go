@@ -52,10 +52,14 @@ type PacketConfig struct {
 	DefDest             string                     `json:",omitempty"`
 	DefBody             string                     `json:",omitempty"`
 	Bulletins           map[string]*BulletinConfig `json:",omitempty"`
-	connType            string
-	ax25addr            string
-	hostname            string
-	port                string
+	UnreadList          []string                   `json:"Unread,omitempty"`
+	Unread              map[string]bool            `json:"-"`
+	// Unread isn't really a "configuration" setting, but it's convenient to
+	// keep it in the packet.conf file anyway.
+	connType string
+	ax25addr string
+	hostname string
+	port     string
 }
 type BulletinConfig struct {
 	Frequency time.Duration
@@ -140,6 +144,10 @@ func readConfig(filename string) {
 		fmt.Fprintf(os.Stderr, "ERROR: %s: %s", filename, err)
 		return
 	}
+	C.Unread = make(map[string]bool, len(C.UnreadList))
+	for _, lmi := range C.UnreadList {
+		C.Unread[lmi] = true
+	}
 }
 
 // SaveConfig saves the configuration.
@@ -149,6 +157,12 @@ func SaveConfig() {
 		home string
 		err  error
 	)
+	C.UnreadList = make([]string, 0, len(C.Unread))
+	for lmi, unread := range C.Unread {
+		if unread {
+			C.UnreadList = append(C.UnreadList, lmi)
+		}
+	}
 	if by, err = json.Marshal(&C); err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %s: %s", packetConf, err)
 		return
@@ -158,24 +172,17 @@ func SaveConfig() {
 	}
 	// Also save a reduced version of it to $HOME/.packet to use as defaults
 	// for future sessions.
-	if home = os.Getenv("HOME"); home == "" {
+	if home, err = os.UserHomeDir(); err != nil || home == "" {
 		return
 	}
-	reduced := C
-	reduced.IncidentName = ""
-	reduced.ActivationNum = ""
-	reduced.ActNumRequested = false
-	reduced.OpStartDate = ""
-	reduced.OpStartTime = ""
-	reduced.OpEndDate = ""
-	reduced.OpEndTime = ""
-	reduced.TacCall = ""
-	reduced.TacName = ""
-	reduced.TacRequested = false
-	reduced.MessageID = ""
-	reduced.DefDest = ""
-	reduced.DefBody = ""
-	reduced.Bulletins = nil
+	var reduced = PacketConfig{
+		BBS:        C.BBS,
+		BBSAddress: C.BBSAddress,
+		SerialPort: C.SerialPort,
+		OpCall:     C.OpCall,
+		OpName:     C.OpName,
+		Password:   C.Password,
+	}
 	by, _ = json.Marshal(&reduced)
 	if err = os.WriteFile(filepath.Join(home, packetDefaults), by, 0666); err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %s", err)

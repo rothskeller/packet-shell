@@ -8,6 +8,7 @@ import (
 	"runtime"
 
 	"github.com/rothskeller/packet-shell/cio"
+	"github.com/rothskeller/packet-shell/config"
 	"github.com/rothskeller/packet/incident"
 	"github.com/rothskeller/packet/message"
 	"github.com/spf13/pflag"
@@ -73,6 +74,10 @@ func cmdPDF(args []string) (err error) {
 		return fmt.Errorf("starting PDF viewer: %s", err)
 	}
 	go func() { open.Wait() }()
+	if config.C.Unread[lmi] {
+		config.C.Unread[lmi] = false
+		config.SaveConfig()
+	}
 	return nil
 
 }

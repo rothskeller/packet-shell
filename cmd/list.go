@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/rothskeller/packet-shell/cio"
+	"github.com/rothskeller/packet-shell/config"
 	"github.com/rothskeller/packet/envelope"
 	"github.com/rothskeller/packet/incident"
 	"github.com/rothskeller/packet/message"
@@ -46,6 +47,7 @@ Several markers can appear in the list for special cases.  These appear in the F
   DRAFT   ⇥indicates an unsent message that is not queued for sending
   QUEUE   ⇥indicates an unsent message that is queued for sending
   NO RCPT ⇥indicates a sent message for which no delivery receipt has been received
+  NEW     ⇥indicates a received message that has not been read
 
 The "connect" command will sometimes show sent messages with a destination message ID on a green background.  This is a transient indication that we just received a delivery receipt for the message.
 `
@@ -99,6 +101,9 @@ func listItemForMessage(lmi, rmi string, env *envelope.Envelope) (li *cio.ListIt
 	}
 	if env.IsReceived() {
 		li.Time = env.ReceivedDate
+		if config.C.Unread[lmi] {
+			li.Flag = "NEW"
+		}
 	} else if env.IsFinal() {
 		li.Time = env.Date
 	} else if env.ReadyToSend {

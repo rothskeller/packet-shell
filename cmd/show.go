@@ -103,6 +103,10 @@ func cmdShow(args []string) (err error) {
 		cio.ShowNameValue(f.Label, f.TableValue(f), labellen)
 	}
 	cio.EndNameValueList()
+	if config.C.Unread[lmi] {
+		config.C.Unread[lmi] = false
+		config.SaveConfig()
+	}
 	return nil
 }
 

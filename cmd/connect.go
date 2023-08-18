@@ -113,11 +113,9 @@ func cmdConnect(args []string) (err error) {
 	if err := conn.run(); err != nil {
 		return err
 	}
-	// Save the configuration with new LastCheck times for the bulletin
-	// areas.
-	if len(conn.areas) != 0 {
-		config.SaveConfig()
-	}
+	// Save the configuration.  It may have new unread messages or new
+	// LastCheck times for the bulletin areas.
+	config.SaveConfig()
 	return nil
 }
 
@@ -383,6 +381,8 @@ func (c *connection) receiveMessage(area string, msgnum int) (done bool, err err
 			cio.ListMessage(li)
 		}
 	default:
+		// Mark it unread.
+		config.C.Unread[lmi] = true
 		// Display the newly received message.
 		if mb := msg.Base(); mb.FOriginMsgID != nil {
 			rmi = *mb.FOriginMsgID

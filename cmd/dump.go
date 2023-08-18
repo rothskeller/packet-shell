@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/rothskeller/packet-shell/cio"
+	"github.com/rothskeller/packet-shell/config"
 	"github.com/spf13/pflag"
 )
 
@@ -40,5 +41,9 @@ func cmdDump(args []string) (err error) {
 	}
 	io.Copy(os.Stdout, fh)
 	fh.Close()
+	if config.C.Unread[lmi] {
+		config.C.Unread[lmi] = false
+		config.SaveConfig()
+	}
 	return nil
 }

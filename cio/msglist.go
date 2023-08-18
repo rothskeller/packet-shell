@@ -8,7 +8,7 @@ import (
 
 type ListItem struct {
 	Handling string // "I", "P", "R", "B" for bulletin
-	Flag     string // "DRAFT", "QUEUE", "NO RCPT", "HAVE RCPT"
+	Flag     string // "DRAFT", "QUEUE", "NO RCPT", "HAVE RCPT", "NEW"
 	Time     time.Time
 	From     string
 	LMI      string
@@ -89,6 +89,10 @@ func listMessageTable(li *ListItem) {
 		}
 	} else if li.To != "" {
 		print(lineColor, " → "+setLength(li.To, 9)+"  ")
+	} else if li.Flag == "NEW" {
+		print(lineColor, "   ")
+		print(colorWarningBG, "NEW")
+		print(lineColor, "        ")
 	} else {
 		print(lineColor, "              ")
 	}
