@@ -58,10 +58,17 @@ func cmdQueue(args []string) (err error) {
 	}
 	if !env.ReadyToSend {
 		if !force {
-			if problems := msg.PIFOValid(); len(problems) != 0 {
-				for _, p := range problems {
-					cio.Error(p)
+			var foundProblem bool
+
+			for _, f := range msg.Base().Fields {
+				if f.EditHelp != "" { // only check editable fields
+					if problem := f.EditValid(f); problem != "" {
+						cio.Error(problem)
+						foundProblem = true
+					}
 				}
+			}
+			if foundProblem {
 				return errors.New("not queueing because message is invalid and --force was not used")
 			}
 		}
