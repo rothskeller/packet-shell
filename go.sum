@@ -8,6 +8,8 @@ github.com/rothskeller/packet v1.7.0 h1:flBSD/5A9bzo+alHcUgw7M+GcNCZBxz85IfKYnM8
 github.com/rothskeller/packet v1.7.0/go.mod h1:GgZ/SxJDg4FnPJ3FX6V6+FHBPgM2OVlQYOeRby5hqNU=
 github.com/rothskeller/packet v1.7.1 h1:vDz8cKAtiiK/ZIAqowXZjRs8dqUDk8TqzyvaPUmFnHQ=
 github.com/rothskeller/packet v1.7.1/go.mod h1:GgZ/SxJDg4FnPJ3FX6V6+FHBPgM2OVlQYOeRby5hqNU=
+github.com/rothskeller/packet v1.7.2 h1:9vQ9VXn6afvSkGG5T6Cp7PoBatz+2+0lMWxq8ETB0Bk=
+github.com/rothskeller/packet v1.7.2/go.mod h1:GgZ/SxJDg4FnPJ3FX6V6+FHBPgM2OVlQYOeRby5hqNU=
 github.com/rothskeller/pdf v1.1.1 h1:n1Sld8m+CqI+T62ip/0FtHW7yk27cyepgy+XQD3wGlQ=
 github.com/rothskeller/pdf v1.1.1/go.mod h1:LVIMDkp7uQUg7KbvPITMJKZstZO53+X92QQSFM+pwHY=
 github.com/spf13/pflag v1.0.5 h1:iy+VFUOCP1a+8yFto/drg2CJ5u0yRoB7fZw3DKv/JXA=
