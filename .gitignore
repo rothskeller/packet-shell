@@ -1,4 +1,5 @@
 *.txt
+!LICENSE.txt
 *.csv
 *.pdf
 packet.conf
