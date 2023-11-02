@@ -205,7 +205,7 @@ LOOP: // Run the editor loop.
 		lmi = newlmi
 	}
 	// Save the resulting message.
-	if err = incident.SaveMessage(lmi, "", env, msg, false); err != nil {
+	if err = incident.SaveMessage(lmi, "", env, msg, false, false); err != nil {
 		return fmt.Errorf("saving %s: %s", lmi, err)
 	}
 	// Display the result.

@@ -73,7 +73,7 @@ func cmdQueue(args []string) (err error) {
 			}
 		}
 		env.ReadyToSend = true
-		if err = incident.SaveMessage(lmi, "", env, msg, false); err != nil {
+		if err = incident.SaveMessage(lmi, "", env, msg, false, false); err != nil {
 			return fmt.Errorf("saving %s: %s", lmi, err)
 		}
 	}

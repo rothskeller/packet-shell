@@ -154,13 +154,13 @@ func cmdSet(args []string) (err error) {
 		return nil
 	}
 	if lmichange != "" {
-		if err = incident.SaveMessage(lmichange, "", env, msg, fastsave); err != nil {
+		if err = incident.SaveMessage(lmichange, "", env, msg, fastsave, false); err != nil {
 			return fmt.Errorf("saving %s: %s", lmichange, err)
 		}
 		incident.RemoveMessage(lmi)
 		return nil
 	}
-	if err = incident.SaveMessage(lmi, "", env, msg, fastsave); err != nil {
+	if err = incident.SaveMessage(lmi, "", env, msg, fastsave, false); err != nil {
 		return fmt.Errorf("saving %s: %s", lmi, err)
 	}
 	return nil

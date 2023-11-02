@@ -316,7 +316,7 @@ func (c *connection) sendMessage(filename string, env *envelope.Envelope, msg me
 			return fmt.Errorf("save receipt %s: %s", filename, err)
 		}
 	} else {
-		if err = incident.SaveMessage(filename, "", env, msg, false); err != nil {
+		if err = incident.SaveMessage(filename, "", env, msg, false, false); err != nil {
 			return fmt.Errorf("save message %s: %s", filename, err)
 		}
 	}

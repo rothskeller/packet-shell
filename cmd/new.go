@@ -191,7 +191,7 @@ func doNew(copyID, replyID string, msg message.Message, nmid string) (err error)
 	if cio.InputIsTerm && cio.OutputIsTerm {
 		return doEdit("", env, msg, "", false)
 	}
-	if err = incident.SaveMessage(*msg.Base().FOriginMsgID, "", env, msg, false); err != nil {
+	if err = incident.SaveMessage(*msg.Base().FOriginMsgID, "", env, msg, false, false); err != nil {
 		return fmt.Errorf("saving %s: %s", *msg.Base().FOriginMsgID, err)
 	}
 	fmt.Println(*msg.Base().FOriginMsgID)

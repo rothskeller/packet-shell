@@ -9,6 +9,7 @@ import (
 
 	"github.com/rothskeller/packet-shell/cio"
 	"github.com/rothskeller/packet-shell/config"
+	"github.com/rothskeller/packet/envelope"
 	"github.com/rothskeller/packet/incident"
 	"github.com/rothskeller/packet/message"
 	"github.com/spf13/pflag"
@@ -26,6 +27,7 @@ The "pdf" command renders the message in PDF format if it isn't already rendered
 func cmdPDF(args []string) (err error) {
 	var (
 		lmi   string
+		env   *envelope.Envelope
 		msg   message.Message
 		txtFI os.FileInfo
 		pdfFI os.FileInfo
@@ -55,10 +57,10 @@ func cmdPDF(args []string) (err error) {
 	}
 	if pdfFI == nil || pdfFI.ModTime().Before(txtFI.ModTime()) {
 		// PDF needs to be regenerated.
-		if _, msg, err = incident.ReadMessage(lmi); err != nil {
+		if env, msg, err = incident.ReadMessage(lmi); err != nil {
 			return fmt.Errorf("reading %s: %s", lmi, err)
 		}
-		if err = msg.RenderPDF(lmi + ".pdf"); err != nil {
+		if err = msg.RenderPDF(env, lmi+".pdf"); err != nil {
 			return fmt.Errorf("rendering PDF: %s", err)
 		}
 	}

@@ -51,7 +51,7 @@ func cmdDraft(args []string) (err error) {
 	}
 	if env.ReadyToSend {
 		env.ReadyToSend = false
-		if err = incident.SaveMessage(lmi, "", env, msg, false); err != nil {
+		if err = incident.SaveMessage(lmi, "", env, msg, false, false); err != nil {
 			return fmt.Errorf("saving %s: %s", lmi, err)
 		}
 	}
