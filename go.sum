@@ -8,6 +8,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rothskeller/packet v1.8.4 h1:ePAif4gcCwFAUgSnkckMf2GKr94a1BhbwgE91Y9VCXk=
 github.com/rothskeller/packet v1.8.4/go.mod h1:3DN0p9HaNF5UgOHu2EgMugwbgz+NbJzNmzrtV62nvHs=
+github.com/rothskeller/packet v1.8.5 h1:VWpAcb7MCvgU2Ju5Grb8XvVhjLmoresGJxDxkDLrdXE=
+github.com/rothskeller/packet v1.8.5/go.mod h1:3DN0p9HaNF5UgOHu2EgMugwbgz+NbJzNmzrtV62nvHs=
 github.com/rothskeller/pdf v1.2.0 h1:EwDK/pW5XHyeRjYSrXkDUJROF1MyRZ2Nco6n9ejTPPc=
 github.com/rothskeller/pdf v1.2.0/go.mod h1:LVIMDkp7uQUg7KbvPITMJKZstZO53+X92QQSFM+pwHY=
 github.com/spf13/pflag v1.0.5 h1:iy+VFUOCP1a+8yFto/drg2CJ5u0yRoB7fZw3DKv/JXA=
