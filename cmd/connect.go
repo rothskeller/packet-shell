@@ -370,10 +370,6 @@ func (c *connection) receiveMessage(area string, msgnum int) (done bool, err err
 	// Record receipt of the message.
 	lmi, env, msg, oenv, omsg, err := incident.ReceiveMessage(
 		raw, config.C.BBS, area, config.C.MessageID, config.C.OpCall, config.C.OpName)
-	if err == incident.ErrDuplicateReceipt {
-		cio.Confirm("NOTE: discarding duplicate receipt for %s", lmi)
-		goto KILL
-	}
 	if err != nil {
 		return false, err
 	}
@@ -408,7 +404,6 @@ func (c *connection) receiveMessage(area string, msgnum int) (done bool, err err
 			}
 		}
 	}
-KILL:
 	// Kill the message from the BBS, unless it's a bulletin.  Note that we
 	// intentionally don't check for a sigint here; once we've sent the
 	// delivery receipt, we definitely want to kill the message.

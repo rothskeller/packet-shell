@@ -149,6 +149,6 @@ author the hardware needed to test them.
 
 This software was written by Steve Roth, KC6RSC.
 
-Copyright © 2023 by Steven Roth <steve@rothskeller.net>
+Copyright © 2023–2024 by Steven Roth <steve@rothskeller.net>
 
 See LICENSE.txt for license details.

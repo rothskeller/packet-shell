@@ -53,10 +53,8 @@ The "connect" command will sometimes show sent messages with a destination messa
 `
 
 func cmdList(args []string) (err error) {
-	var (
-		remotes map[string]string
-		lmis    []string
-	)
+	var lmis []string
+
 	var flags = pflag.NewFlagSet("list", pflag.ContinueOnError)
 	flags.Usage = func() {} // we do our own
 	if err = flags.Parse(args); err == pflag.ErrHelp {
@@ -68,10 +66,6 @@ func cmdList(args []string) (err error) {
 	if len(args) != 0 {
 		return usage(listHelp)
 	}
-	// Read the remote message IDs.
-	if remotes, err = incident.RemoteMap(); err != nil {
-		return fmt.Errorf("read remote message IDs: %s", err)
-	}
 	// Now read the list of files again and display those that should be
 	// displayed.
 	if lmis, err = incident.AllLMIs(); err != nil {
@@ -82,11 +76,26 @@ func cmdList(args []string) (err error) {
 		if err != nil {
 			continue
 		}
-		li := listItemForMessage(lmi, remotes[lmi], env)
-		if !env.IsReceived() && env.IsFinal() && !incident.HasDeliveryReceipt(lmi) {
-			li.Flag = "NO RCPT"
+		if !env.IsReceived() {
+			if delivs, err := incident.Deliveries(lmi); err != nil {
+				return fmt.Errorf("%s: reading delivery receipts: %s", lmi, err)
+			} else {
+				toSave := env.To
+				for _, deliv := range delivs {
+					env.To = deliv.Recipient
+					li := listItemForMessage(lmi, deliv.RemoteMessageID, env)
+					if env.IsFinal() && deliv.RemoteMessageID == "" {
+						li.Flag = "NO RCPT"
+					}
+					cio.ListMessage(li)
+				}
+				env.To = toSave
+			}
+		} else {
+			rmi, _, _, _, _ := message.DecodeSubject(env.SubjectLine)
+			li := listItemForMessage(lmi, rmi, env)
+			cio.ListMessage(li)
 		}
-		cio.ListMessage(li)
 	}
 	cio.EndMessageList("No messages.")
 	return nil

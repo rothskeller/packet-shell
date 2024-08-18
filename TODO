@@ -1,1 +1,4 @@
 Handling new/old fields in edit.
+Panic handler that writes message and trace to logfile.
+Keep automatic message IDs separate from manually entered ones to avoid
+duplicates.

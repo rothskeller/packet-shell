@@ -46,20 +46,20 @@ const filesSlug = `directory layout and file formats`
 const filesHelp = `
 Each incident (or other activation) has its own directory.  It contains the following files:
 
-  LOC-111P.txt     ⇥message with local ID "LOC-111P", in RFC-5322 format
-  LOC-111P.pdf     ⇥form from "LOC-111P", if any, in PDF format
-  LOC-111P.DR.txt  ⇥delivery receipt for "LOC-111P", if any
-  LOC-111P.RR.txt  ⇥read receipt for "LOC-111P", if any
-  REM-222P.txt     ⇥symbolic link: remote ID "REM-222P" to local ID "LOC-111P"
-  REM-222P.pdf     ⇥symbolic link: remote ID "REM-222P" to local ID "LOC-111P"
-  ics309.csv       ⇥ICS-309 communications log, in CSV format
-  ics309.pdf       ⇥ICS-309 communications log, in PDF format
-  packet.conf      ⇥incident/activation configuration settings, in JSON format
-  packet.log       ⇥text file with log of all BBS communications
+  LOC-111P.txt      ⇥message with local ID "LOC-111P", in RFC-5322 format
+  LOC-111P.pdf      ⇥form from "LOC-111P", if any, in PDF format
+  LOC-111P.DR#.txt  ⇥delivery receipts for "LOC-111P", if any
+  LOC-111P.RR#.txt  ⇥read receipts for "LOC-111P", if any
+  REM-222P.txt      ⇥symbolic link: remote ID "REM-222P" to local ID "LOC-111P"
+  REM-222P.pdf      ⇥symbolic link: remote ID "REM-222P" to local ID "LOC-111P"
+  ics309.csv        ⇥ICS-309 communications log, in CSV format
+  ics309.pdf        ⇥ICS-309 communications log, in PDF format
+  packet.conf       ⇥incident/activation configuration settings, in JSON format
+  packet.log        ⇥text file with log of all BBS communications
 
-For messages that we received, LOC-111P.txt and LOC-111P.pdf contain the received message, LOC-111P.DR.txt contains the delivery receipt we sent for the message, and REM-222P.txt and REM-222P.pdf are named with the Origin Message ID of the received message.
+For messages that we received, LOC-111P.txt and LOC-111P.pdf contain the received message, LOC-111P.DR0.txt contains the delivery receipt we sent for the message, and REM-222P.txt and REM-222P.pdf are named with the Origin Message ID of the received message.
 
-For messages that we sent, LOC-111P.txt and LOC-111P.pdf contain the sent message, LOC-111P.DR.txt and LOC-111P.RR.txt contain the receipts we received for the message, and REM-222P.txt and REM-222P.pdf are named with the destination station's message ID for the message we sent (which we pull from their delivery receipt).
+For messages that we sent, LOC-111P.txt and LOC-111P.pdf contain the sent message, LOC-111P.DR#.txt and LOC-111P.RR#.txt contain the receipts we received for the message, and REM-222P.txt and REM-222P.pdf are named with the destination stations' message IDs for the message we sent (which we pull from their delivery receipts).
 
 For outgoing messages that we haven't sent yet, LOC-111P.txt and LOC-111P.pdf contain the message; none of the other message files exist.  The message has an "X-Packet-Queued: true" header if it is queued to be sent.
 
