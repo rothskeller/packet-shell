@@ -61,7 +61,12 @@ func cmdPDF(args []string) (err error) {
 			return fmt.Errorf("reading %s: %s", lmi, err)
 		}
 		if err = msg.RenderPDF(env, lmi+".pdf"); err != nil {
-			return fmt.Errorf("rendering PDF: %s", err)
+			var warn message.Warning
+			if errors.As(err, &warn) {
+				cio.Error("rendering PDF: %s", warn)
+			} else {
+				return fmt.Errorf("rendering PDF: %s", err)
+			}
 		}
 	}
 	switch runtime.GOOS {

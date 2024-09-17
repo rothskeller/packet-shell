@@ -54,7 +54,7 @@ For a list of all commands, run `packet help`.  For the details of a specific
 command, run `packet help «command»`.
 
 The input and output of the packet commands varies depending on whether standard
-input and output are a terminal.  When the are — i.e., when a human is running
+input and output are a terminal.  When they are — i.e., when a human is running
 the packet shell — the results are colorized, formatted for human eyes, and
 interactive.  When they are not — i.e., when a script is calling the packet
 shell, or I/O redirection is in use — the results are script-friendly, terse,
