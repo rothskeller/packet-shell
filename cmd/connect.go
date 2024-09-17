@@ -302,13 +302,20 @@ func (c *connection) sendMessage(filename string, env *envelope.Envelope, msg me
 		return errors.New("invalid To: address list")
 	} else if len(addrs) == 0 {
 		return errors.New("no To: addresses")
+	} else if env.Bulletin && len(addrs) != 1 {
+		return errors.New("bulletins should have only one To: address")
 	} else {
 		to = make([]string, len(addrs))
 		for i, a := range addrs {
 			to[i] = a.Address
 		}
 	}
-	if err = c.conn.Send(env.SubjectLine, env.RenderBody(body), to...); err != nil {
+	if env.Bulletin {
+		err = c.conn.SendBulletin(env.SubjectLine, env.RenderBody(body), to[0])
+	} else {
+		err = c.conn.Send(env.SubjectLine, env.RenderBody(body), to...)
+	}
+	if err != nil {
 		return fmt.Errorf("JNOS send: %s", err)
 	}
 	if strings.HasSuffix(filename, ".DR") {

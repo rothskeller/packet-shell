@@ -21,8 +21,9 @@ const newHelp = `
 usage: packet new ⇥«new-message-type» [«new-message-id»]
        packet new ⇥--copy «message-id» [«new-message-id»]
        packet new ⇥--reply «message-id» [«new-message-type»] [«new-message-id»]
-  -c, --copy   ⇥create a copy of an existing message
-  -r, --reply  ⇥create a reply to a received message
+  -b, --bulletin  ⇥create bulletin message
+  -c, --copy      ⇥create a copy of an existing message
+  -r, --reply     ⇥create a reply to a received message
 
 The "new" (or "n") command creates a new outgoing message.  In interactive (--no-script) mode, the new message will be opened for editing (see "packet help edit" for details).  In --script mode, the local message ID for the new message will be printed to standard output, and subsequent "set" commands can be used to populate it.
 
@@ -32,20 +33,24 @@ When the --copy (or -c) flag is given, the new message will be an exact copy of 
 
 When neither the --reply nor --copy flag is given, an empty message of «new-message-type» is created.  «new-message-type» must be an unambiguous abbreviation of one of the supported message types.  Use "packet help types" to get a list of supported message types.
 
+When the --bulletin (or -b) flag is given, the new message will be a bulletin message rather than a private message.  This means that its message number and handling order will not be encoded into its subject line, and that no delivery receipts will be expected for it.  It is the user's responsibility to ensure that the To: address for the message is a bulletin address.
+
 If a «new-message-id» is provided on the command line, the new message is created with that local message ID.  The sequence number in it will be incremented as needed to make it unique.  The «new-message-id» may be just an integer, in which case the message number and prefix in the incident / activation configuration are used (see "packet help config").  If no «new-message-id» is given, one will be automatically assigned based on the incident / activation configuration.
 `
 
 func cmdNew(args []string) (err error) {
 	var (
-		replyID string
-		copyID  string
-		nmtype  string
-		nmid    string
-		msg     message.Message
-		flags   = pflag.NewFlagSet("new", pflag.ContinueOnError)
+		replyID  string
+		copyID   string
+		bulletin bool
+		nmtype   string
+		nmid     string
+		msg      message.Message
+		flags    = pflag.NewFlagSet("new", pflag.ContinueOnError)
 	)
 	flags.StringVarP(&replyID, "reply", "r", "", "create a reply to a received message")
 	flags.StringVarP(&copyID, "copy", "c", "", "create a copy of an existing message")
+	flags.BoolVarP(&bulletin, "bulletin", "b", false, "create a bulletin message")
 	flags.Usage = func() {} // we do our own
 	if err = flags.Parse(args); err == pflag.ErrHelp {
 		return cmdHelp([]string{"new"})
@@ -102,10 +107,10 @@ func cmdNew(args []string) (err error) {
 			return errors.New("no message numbering pattern defined in configuration; must provide complete message ID")
 		}
 	}
-	return doNew(copyID, replyID, msg, nmid)
+	return doNew(copyID, replyID, bulletin, msg, nmid)
 }
 
-func doNew(copyID, replyID string, msg message.Message, nmid string) (err error) {
+func doNew(copyID, replyID string, bulletin bool, msg message.Message, nmid string) (err error) {
 	var (
 		srclmi string
 		env    *envelope.Envelope
@@ -160,6 +165,7 @@ func doNew(copyID, replyID string, msg message.Message, nmid string) (err error)
 				*msg.Base().FReference = *srcmsg.Base().FOriginMsgID
 			}
 		}
+		env.Bulletin = bulletin
 		if env.To == "" {
 			env.To = config.C.DefDest
 		}

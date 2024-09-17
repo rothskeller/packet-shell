@@ -103,7 +103,7 @@ func cmdList(args []string) (err error) {
 
 func listItemForMessage(lmi, rmi string, env *envelope.Envelope) (li *cio.ListItem) {
 	li = new(cio.ListItem)
-	if env.ReceivedArea != "" {
+	if env.Bulletin {
 		li.Handling = "B"
 	} else {
 		_, _, li.Handling, _, _ = message.DecodeSubject(env.SubjectLine)
