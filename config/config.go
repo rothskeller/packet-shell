@@ -48,7 +48,8 @@ type PacketConfig struct {
 	TacName             string                     `json:",omitempty"`
 	TacRequested        bool                       `json:",omitempty"`
 	Password            string                     `json:",omitempty"`
-	MessageID           string                     `json:",omitempty"`
+	TxMessageID         string                     `json:",omitempty"`
+	RxMessageID         string                     `json:",omitempty"`
 	DefDest             string                     `json:",omitempty"`
 	DefBody             string                     `json:",omitempty"`
 	Bulletins           map[string]*BulletinConfig `json:",omitempty"`
@@ -413,17 +414,23 @@ func makeConfigFields() []*message.Field {
 		}),
 		message.NewMessageNumberField(&message.Field{
 			Label:    "Message Numbering",
-			Value:    &C.MessageID,
-			EditHelp: `This is the starting message ID.  Newly received and created messages will be assigned message IDs like this one, with increasing sequence numbers.  The message ID must have the form XXX-###P.  For tactical stations, XXX is the three-character message ID prefix assigned to the station.  For personal stations, XXX should be the last three characters of your call sign.  ### is a number (any number of digits).  P is a suffix character, usually "P" but sometimes "M".`,
+			Value:    &C.RxMessageID,
+			EditHelp: `This is the starting message ID.  Newly received messages will be assigned message IDs like this one, with increasing sequence numbers.  The message ID must have the form XXX-###P.  For tactical stations, XXX is the three-character message ID prefix assigned to the station.  For personal stations, XXX should be the last three characters of your call sign.  ### is a number (any number of digits).  P is a suffix character, usually "P" but sometimes "M".`,
 			EditValue: func(f *message.Field) string {
-				if C.MessageID == "" {
+				if C.RxMessageID == "" {
 					if len(C.TacCall) >= 3 {
-						C.MessageID = C.TacCall[:3] + "-100P"
+						C.RxMessageID = C.TacCall[:3] + "-100P"
 					} else if C.TacCall == "" && len(C.OpCall) >= 3 {
-						C.MessageID = C.OpCall[len(C.OpCall)-3:] + "-100P"
+						C.RxMessageID = C.OpCall[len(C.OpCall)-3:] + "-100P"
 					}
 				}
-				return C.MessageID
+				return C.RxMessageID
+			},
+			EditApply: func(_ *message.Field, s string) {
+				if C.TxMessageID == C.RxMessageID {
+					C.TxMessageID = s
+				}
+				C.RxMessageID = s
 			},
 		}),
 		message.NewAddressListField(&message.Field{

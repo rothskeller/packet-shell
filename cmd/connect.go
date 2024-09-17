@@ -181,7 +181,7 @@ func preConnectScan(sendlevel int, areas map[string]*config.BulletinConfig) (
 // haveConnectConfig returns whether we have all of the necessary config
 // settings to make a connection to the server.
 func haveConnectConfig() bool {
-	if config.C.BBSAddress == "" || config.C.OpCall == "" || config.C.MessageID == "" {
+	if config.C.BBSAddress == "" || config.C.OpCall == "" || config.C.RxMessageID == "" {
 		return false
 	}
 	if strings.Contains(config.C.BBSAddress, ":") {
@@ -369,7 +369,7 @@ func (c *connection) receiveMessage(area string, msgnum int) (done bool, err err
 	}
 	// Record receipt of the message.
 	lmi, env, msg, oenv, omsg, err := incident.ReceiveMessage(
-		raw, config.C.BBS, area, config.C.MessageID, config.C.OpCall, config.C.OpName)
+		raw, config.C.BBS, area, config.C.RxMessageID, config.C.OpCall, config.C.OpName)
 	if err != nil {
 		return false, err
 	}

@@ -84,7 +84,7 @@ func cmdList(args []string) (err error) {
 				for _, deliv := range delivs {
 					env.To = deliv.Recipient
 					li := listItemForMessage(lmi, deliv.RemoteMessageID, env)
-					if env.IsFinal() && deliv.RemoteMessageID == "" {
+					if env.IsFinal() && deliv.RemoteMessageID == "" && !env.Bulletin {
 						li.Flag = "NO RCPT"
 					}
 					cio.ListMessage(li)

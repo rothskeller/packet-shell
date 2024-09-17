@@ -88,7 +88,7 @@ func cmdNew(args []string) (err error) {
 	}
 	switch {
 	case nmid == "":
-		if (!cio.InputIsTerm || !cio.OutputIsTerm) && config.C.MessageID == "" {
+		if (!cio.InputIsTerm || !cio.OutputIsTerm) && config.C.TxMessageID == "" {
 			return errors.New("no message numbering pattern defined in configuration; must provide message ID")
 		}
 	case incident.MsgIDRE.MatchString(nmid):
@@ -98,7 +98,7 @@ func cmdNew(args []string) (err error) {
 			cio.Error("%q is not a valid message number", nmid)
 			return usage(newHelp)
 		}
-		if (!cio.InputIsTerm || !cio.OutputIsTerm) && config.C.MessageID == "" {
+		if (!cio.InputIsTerm || !cio.OutputIsTerm) && config.C.TxMessageID == "" {
 			return errors.New("no message numbering pattern defined in configuration; must provide complete message ID")
 		}
 	}
@@ -182,11 +182,11 @@ func doNew(copyID, replyID string, msg message.Message, nmid string) (err error)
 	if incident.MsgIDRE.MatchString(nmid) {
 		*msg.Base().FOriginMsgID = incident.UniqueMessageID(nmid)
 	} else if nmid != "" {
-		if match := incident.MsgIDRE.FindStringSubmatch(config.C.MessageID); match != nil {
+		if match := incident.MsgIDRE.FindStringSubmatch(config.C.TxMessageID); match != nil {
 			*msg.Base().FOriginMsgID = incident.UniqueMessageID(match[1] + "-" + nmid + match[3])
 		}
-	} else if config.C.MessageID != "" {
-		*msg.Base().FOriginMsgID = incident.UniqueMessageID(config.C.MessageID)
+	} else if config.C.TxMessageID != "" {
+		*msg.Base().FOriginMsgID = incident.UniqueMessageID(config.C.TxMessageID)
 	}
 	if cio.InputIsTerm && cio.OutputIsTerm {
 		return doEdit("", env, msg, "", false)

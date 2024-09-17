@@ -216,7 +216,7 @@ LOOP: // Run the editor loop.
 	// If the message had any fields that we keep in the configuration,
 	// update the configuration.
 	if msg.Base().FOriginMsgID != nil && *msg.Base().FOriginMsgID != "" {
-		config.C.MessageID, saveConfig = *msg.Base().FOriginMsgID, true
+		config.C.TxMessageID, saveConfig = *msg.Base().FOriginMsgID, true
 	}
 	if msg.Base().FOpCall != nil && *msg.Base().FOpCall != "" {
 		config.C.OpCall, saveConfig = *msg.Base().FOpCall, true
