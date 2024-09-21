@@ -218,7 +218,7 @@ func msgForTag(tag string) (msg message.Message, err error) {
 		if len(rt) < len(tag) || !strings.EqualFold(tag, rt[:len(tag)]) {
 			continue
 		}
-		if m := message.Create(rt); m == nil || !m.Editable() {
+		if m := message.Create(rt, ""); m == nil || !m.Editable() {
 			continue
 		} else if msg != nil {
 			return nil, fmt.Errorf("message type %q is ambiguous", tag)

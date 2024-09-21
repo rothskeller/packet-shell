@@ -92,10 +92,13 @@ const typesSlug = `list of supported message types`
 
 func typesHelp() {
 	var tags = make([]string, 0, len(message.RegisteredTypes))
+	var names = make(map[string]string)
 	var taglen int
 	for tag := range message.RegisteredTypes {
-		if msg := message.Create(tag); msg == nil || !msg.Editable() {
+		if msg := message.Create(tag, ""); msg == nil || !msg.Editable() {
 			continue
+		} else {
+			names[tag] = msg.Base().Type.Name
 		}
 		tags = append(tags, tag)
 		aliaslen := len(aliases[tag])
@@ -106,11 +109,10 @@ func typesHelp() {
 	}
 	sort.Strings(tags)
 	for _, tag := range tags {
-		var name = message.RegisteredTypes[tag].Name
 		if alias := aliases[tag]; alias != "" {
 			tag += " (" + alias + ")"
 		}
-		cio.ShowNameValue(tag, name, taglen)
+		cio.ShowNameValue(tag, names[tag], taglen)
 	}
 	cio.EndNameValueList()
 }
