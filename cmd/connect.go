@@ -356,8 +356,10 @@ func (c *connection) receiveMessages() (err error) {
 // message with the specified number exists, and false, !nil if some other error
 // occurs.
 func (c *connection) receiveMessage(area string, msgnum int) (done bool, err error) {
-	var rmi string
-
+	var (
+		rmi string
+		w   incident.Warning
+	)
 	if c.checkSigInt() {
 		return false, ErrInterrupted
 	}
@@ -377,7 +379,9 @@ func (c *connection) receiveMessage(area string, msgnum int) (done bool, err err
 	// Record receipt of the message.
 	lmi, env, msg, oenv, omsg, err := incident.ReceiveMessage(
 		raw, config.C.BBS, area, config.C.RxMessageID, config.C.OpCall, config.C.OpName)
-	if err != nil {
+	if errors.As(err, &w) {
+		cio.Confirm("WARNING: %s has fields that are invalid for its type and version", lmi)
+	} else if err != nil {
 		return false, err
 	}
 	// Received receipts are handled differently than other messages.
