@@ -86,7 +86,7 @@ RESTART:
 		choices:    f.Choices.ListHuman(),
 	}
 	e.cursor = len(e.value)
-	e.sels, e.sele = e.cursor, e.cursor
+	e.sels, e.sele = 0, e.cursor
 	for _, c := range e.choices {
 		e.fieldWidth = max(e.fieldWidth, len(c))
 	}
