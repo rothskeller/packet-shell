@@ -13,15 +13,15 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-func BulletinScheduleTable(bulletins map[string]*config.BulletinConfig) {
+func BulletinScheduleTable() {
 	if OutputIsTerm {
-		bulletinsTable(bulletins)
+		bulletinsTable()
 	} else {
-		bulletinsCSV(bulletins)
+		bulletinsCSV()
 	}
 }
 
-func bulletinsCSV(bulletins map[string]*config.BulletinConfig) {
+func bulletinsCSV() {
 	var (
 		cw    *csv.Writer
 		areas = maps.Keys(config.C.Bulletins)
@@ -44,7 +44,7 @@ func bulletinsCSV(bulletins map[string]*config.BulletinConfig) {
 	cw.Flush()
 }
 
-func bulletinsTable(bulletins map[string]*config.BulletinConfig) {
+func bulletinsTable() {
 	var (
 		col1  = []string{"AREA"}
 		col2  = []string{"SCHEDULE"}

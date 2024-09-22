@@ -115,6 +115,6 @@ func doBulletins(frequency time.Duration, stop, now bool, areas []string) (err e
 		config.SaveConfig()
 	}
 	// Report the bulletin schedule.
-	cio.BulletinScheduleTable(config.C.Bulletins)
+	cio.BulletinScheduleTable()
 	return nil
 }
