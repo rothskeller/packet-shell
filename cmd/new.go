@@ -194,6 +194,8 @@ func doNew(copyID, replyID string, bulletin bool, msg message.Message, nmid stri
 		}
 	} else if config.C.TxMessageID != "" {
 		*msg.Base().FOriginMsgID = incident.UniqueMessageID(config.C.TxMessageID)
+	} else if config.C.RxMessageID != "" {
+		*msg.Base().FOriginMsgID = incident.UniqueMessageID(config.C.RxMessageID)
 	}
 	if cio.InputIsTerm && cio.OutputIsTerm {
 		return doEdit("", env, msg, "", false)
