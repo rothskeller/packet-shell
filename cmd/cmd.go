@@ -21,6 +21,15 @@ var safeDir string
 func Run(args []string) (ok bool) {
 	var err error
 
+	defer func() {
+		if p := recover(); p != nil {
+			if logfile, err := os.OpenFile("packet.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666); err == nil {
+				fmt.Fprintf(logfile, "PANIC: %v\n%s\n", p, debug.Stack())
+				logfile.Close()
+			}
+			panic(p)
+		}
+	}()
 	cio.Detect()
 	safeDir = safeDirectory()
 	if len(args) == 0 {
