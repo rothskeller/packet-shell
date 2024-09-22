@@ -33,6 +33,11 @@ Message Numbering
     This is the message number of the first message; subsequent messages will follow the same pattern with increasing sequence numbers.
 Default Destination
     This is the address list to be added to the "To" field of any new message.
+Default To ICS Position
+Default To Location
+Default From ICS Position
+Default From Location
+    These are default values for the addressing fields of new messages.
 Default Body Text
     This is text to be added to the body text field of any new message, e.g., "**** This is drill traffic ****".
 Incident Name

@@ -51,6 +51,10 @@ type PacketConfig struct {
 	TxMessageID         string                     `json:",omitempty"`
 	RxMessageID         string                     `json:",omitempty"`
 	DefDest             string                     `json:",omitempty"`
+	DefToPosition       string                     `json:",omitempty"`
+	DefToLocation       string                     `json:",omitempty"`
+	DefFromPosition     string                     `json:",omitempty"`
+	DefFromLocation     string                     `json:",omitempty"`
 	DefBody             string                     `json:",omitempty"`
 	Bulletins           map[string]*BulletinConfig `json:",omitempty"`
 	UnreadList          []string                   `json:"Unread,omitempty"`
@@ -72,6 +76,7 @@ var C PacketConfig
 var possiblePorts []string
 
 func init() {
+	C.Unread = make(map[string]bool)
 	C.SerialPort = guessSerialPort()
 	// The last configuration saved for any session was also saved to
 	// $HOME/.packet.  Read that, if it exists, to override the above
@@ -437,6 +442,26 @@ func makeConfigFields() []*message.Field {
 			Label:    "Default Destination",
 			Value:    &C.DefDest,
 			EditHelp: `This is an optional list of "To" addresses to be filled into every new message.`,
+		}),
+		message.NewAddressListField(&message.Field{
+			Label:    "Default To ICS Position",
+			Value:    &C.DefToPosition,
+			EditHelp: `This is an optional value for the "To ICS Position" field in new messages.`,
+		}),
+		message.NewAddressListField(&message.Field{
+			Label:    "Default To Location",
+			Value:    &C.DefToLocation,
+			EditHelp: `This is an optional value for the "To Location" field in new messages.`,
+		}),
+		message.NewAddressListField(&message.Field{
+			Label:    "Default From ICS Position",
+			Value:    &C.DefFromPosition,
+			EditHelp: `This is an optional value for the "From ICS Position" field in new messages.`,
+		}),
+		message.NewAddressListField(&message.Field{
+			Label:    "Default From Location",
+			Value:    &C.DefFromLocation,
+			EditHelp: `This is an optional value for the "From Location" field in new messages.`,
 		}),
 		message.NewMultilineField(&message.Field{
 			Label:    "Default Body Text",

@@ -170,6 +170,18 @@ func doNew(copyID, replyID string, bulletin bool, msg message.Message, nmid stri
 		if env.To == "" {
 			env.To = config.C.DefDest
 		}
+		if msg.Base().FToICSPosition != nil {
+			*msg.Base().FToICSPosition = config.C.DefToPosition
+		}
+		if msg.Base().FToLocation != nil {
+			*msg.Base().FToLocation = config.C.DefToLocation
+		}
+		if msg.Base().FFromICSPosition != nil {
+			*msg.Base().FFromICSPosition = config.C.DefFromPosition
+		}
+		if msg.Base().FFromLocation != nil {
+			*msg.Base().FFromLocation = config.C.DefFromLocation
+		}
 		if msg.Base().FBody != nil && *msg.Base().FBody == "" {
 			*msg.Base().FBody = config.C.DefBody
 		}
