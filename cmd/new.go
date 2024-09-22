@@ -137,7 +137,7 @@ func doNew(copyID, replyID string, bulletin bool, msg message.Message, nmid stri
 		if replyID != "" {
 			var srcenv *envelope.Envelope
 
-			if srclmi, err = expandMessageID(srclmi, true); err != nil {
+			if srclmi, err = expandMessageID(replyID, true); err != nil {
 				return err
 			}
 			if srcenv, srcmsg, err = incident.ReadMessage(srclmi); err != nil {
