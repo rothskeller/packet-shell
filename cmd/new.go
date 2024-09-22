@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -31,7 +32,7 @@ When the --reply (or -r) flag is given, the new message will have the same handl
 
 When the --copy (or -c) flag is given, the new message will be an exact copy of the named source message except for being given a new local message ID.  The «message-id» must be the local or remote message ID of an outgoing message (either sent or unsent).  It can be just the numeric part of the ID if that is unique.
 
-When neither the --reply nor --copy flag is given, an empty message of «new-message-type» is created.  «new-message-type» must be an unambiguous abbreviation of one of the supported message types.  Use "packet help types" to get a list of supported message types.
+When neither the --reply nor --copy flag is given, an empty message of «new-message-type» is created.  «new-message-type» must be an unambiguous abbreviation of one of the supported message types.  Use "packet help types" to get a list of supported message types.  A "v2.3" or similar suffix can be added to it (without a space) to specify a particular version of the message type.
 
 When the --bulletin (or -b) flag is given, the new message will be a bulletin message rather than a private message.  This means that its message number and handling order will not be encoded into its subject line, and that no delivery receipts will be expected for it.  It is the user's responsibility to ensure that the To: address for the message is a bulletin address.
 
@@ -209,8 +210,15 @@ var aliases = map[string]string{
 	"co": checkout.Type.Tag,
 }
 
+var versionRE = regexp.MustCompile(`v\d(?:[.0-9]+\d)[a-z]*$`)
+
 // msgForTag returns a created message of the type specified by the tag.
 func msgForTag(tag string) (msg message.Message, err error) {
+	var version string
+
+	if match := versionRE.FindString(tag); match != "" {
+		version, tag = match[1:], tag[:len(tag)-len(match)]
+	}
 	if alias := aliases[tag]; alias != "" {
 		tag = alias
 	}
@@ -218,7 +226,7 @@ func msgForTag(tag string) (msg message.Message, err error) {
 		if len(rt) < len(tag) || !strings.EqualFold(tag, rt[:len(tag)]) {
 			continue
 		}
-		if m := message.Create(rt, ""); m == nil || !m.Editable() {
+		if m := message.Create(rt, version); m == nil || !m.Editable() {
 			continue
 		} else if msg != nil {
 			return nil, fmt.Errorf("message type %q is ambiguous", tag)
@@ -226,7 +234,9 @@ func msgForTag(tag string) (msg message.Message, err error) {
 			msg = m
 		}
 	}
-	if msg == nil {
+	if msg == nil && version != "" {
+		return nil, fmt.Errorf("no such message type \"%sv%s\"", tag, version)
+	} else if msg == nil {
 		return nil, fmt.Errorf("no such message type %q", tag)
 	}
 	return msg, nil
