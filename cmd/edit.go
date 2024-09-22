@@ -21,7 +21,7 @@ usage: packet edit ⇥[flags] «message-id»|config [«field-name»]
 
 The "edit" (or "e") command edits an unsent message.  It presents each field in turn and allows that field's value to be changed.  Note that the "edit" command cannot be used in scripted mode (see "packet help script").
 
-«message-id» must be the local message ID of an unsent outgoing message.  It can be just the numeric part of the message ID if that is unique.  If the word "config" is given instead, the "edit" command edits the incident / activation settings instead (see "packet help config").
+«message-id» must be the local message ID of an unsent outgoing message.  It can be just the numeric part of the message ID if that is unique.  If the word "config" (or an abbreviation) is given instead, the "edit" command edits the incident / activation settings instead (see "packet help config").
 
 The "edit" command normally starts with the first field of the message (or the first that has an error, if --errors is used).  If a «field-name» is specified, editing begins with that field instead.  «field-name» can be the PackItForms tag for the field (including the trailing period, if any), or it can be the full field name or a shortened version of the field name, such as "ocs" for "Operator Call Sign."
 
@@ -78,7 +78,7 @@ func cmdEdit(args []string) (err error) {
 		return usage(editHelp)
 	}
 	args = flags.Args()
-	if args[0] == "config" {
+	if strings.HasPrefix("config", args[0]) {
 		lmi = "config"
 		env = new(envelope.Envelope)
 		msg = &config.C

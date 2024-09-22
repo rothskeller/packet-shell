@@ -18,7 +18,7 @@ usage: packet show ⇥«message-id»|config [«field-name»]
 
 The "show" (or "s") command displays a message in a two-column field-name / field-value format.  If standard output is a terminal, it is presented as a table; otherwise, it is printed in CSV format.  The "show" command can also display the value of a single field of the message.
 
-«message-id» must be the local or remote message ID of the message to display.  It can be just the numeric part of the ID if that is unique.  If the word "config" is used, the "show" command shows the incident / activation settings (see "packet help config").
+«message-id» must be the local or remote message ID of the message to display.  It can be just the numeric part of the ID if that is unique.  If the word "config" (or an abbreviation) is used, the "show" command shows the incident / activation settings (see "packet help config").
 
 «field-name» is an optional name of a single field to display.  It can be the PackItForms tag for the field (including the trailing period, if any), or it can be the full field name.  When standard output is a terminal, it can be a shortened version of the field name, such as "ocs" for "Operator Call Sign."
 `
@@ -43,7 +43,7 @@ func cmdShow(args []string) (err error) {
 	if len(args) < 1 || len(args) > 2 {
 		return usage(showHelp)
 	}
-	if args[0] == "config" {
+	if strings.HasPrefix("config", args[0]) {
 		lmi, msg = "config", &config.C
 	} else {
 		if lmi, err = expandMessageID(args[0], true); err != nil {

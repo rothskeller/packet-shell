@@ -21,7 +21,7 @@ usage: packet set ⇥[flags] «message-id»|config «field-name» [«value»]
 
 The "set" command sets the value of a field of a message.  If a «value» is provided on the command line, it is used; otherwise, the new value is read from standard input.  The provided value must be valid for the field unless the --force flag is given.
 
-«message-id» must be the local message ID of an unsent outgoing message.  It can be just the numeric part of the ID if that is unique.  If the word "config" is used instead, the "set" command sets variables in the incident / activation settings (see "packet help config").
+«message-id» must be the local message ID of an unsent outgoing message.  It can be just the numeric part of the ID if that is unique.  If the word "config" (or an abbreviation) is used instead, the "set" command sets variables in the incident / activation settings (see "packet help config").
 
 «field-name» is the name of the field to set.  It can be the PackItForms tag for the field (including the trailing period, if any), or it can be the full field name.  In interactive (--no-script) mode, it can be a shortened version of the field name, such as "ocs" for "Operator Call Sign."
 `
@@ -52,7 +52,7 @@ func cmdSet(args []string) (err error) {
 	if len(args) < 2 {
 		return usage(setHelp)
 	}
-	if args[0] == "config" {
+	if strings.HasPrefix("config", args[0]) {
 		lmi, msg = "config", &config.C
 	} else {
 		if lmi, err = expandMessageID(args[0], false); err != nil {
