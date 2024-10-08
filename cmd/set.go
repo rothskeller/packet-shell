@@ -151,6 +151,7 @@ func cmdSet(args []string) (err error) {
 	// Apply the change.
 	if lmi == "config" {
 		config.SaveConfig()
+		incident.RemoveICS309s()
 		return nil
 	}
 	if lmichange != "" {

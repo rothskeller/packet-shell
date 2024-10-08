@@ -172,9 +172,11 @@ LOOP: // Run the editor loop.
 			panic("unknown result code")
 		}
 	}
-	// If editing the configuration, save it.
+	// If editing the configuration, save it.  Also remove any ICS-309s,
+	// since we may have changed the header information for them.
 	if lmi == "config" {
 		config.SaveConfig()
+		incident.RemoveICS309s()
 		return nil
 	}
 	// Make sure we have a valid LMI.  We have to have one to save the file.
