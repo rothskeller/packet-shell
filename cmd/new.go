@@ -12,6 +12,7 @@ import (
 	"github.com/rothskeller/packet/envelope"
 	"github.com/rothskeller/packet/incident"
 	"github.com/rothskeller/packet/message"
+	"github.com/rothskeller/packet/xscmsg/bulletin"
 	"github.com/rothskeller/packet/xscmsg/checkin"
 	"github.com/rothskeller/packet/xscmsg/checkout"
 	"github.com/spf13/pflag"
@@ -22,7 +23,6 @@ const newHelp = `
 usage: packet new ⇥«new-message-type» [«new-message-id»]
        packet new ⇥--copy «message-id» [«new-message-id»]
        packet new ⇥--reply «message-id» [«new-message-type»] [«new-message-id»]
-  -b, --bulletin  ⇥create bulletin message
   -c, --copy      ⇥create a copy of an existing message
   -r, --reply     ⇥create a reply to a received message
 
@@ -34,24 +34,20 @@ When the --copy (or -c) flag is given, the new message will be an exact copy of 
 
 When neither the --reply nor --copy flag is given, an empty message of «new-message-type» is created.  «new-message-type» must be an unambiguous abbreviation of one of the supported message types.  Use "packet help types" to get a list of supported message types.  A "v2.3" or similar suffix can be added to it (without a space) to specify a particular version of the message type.
 
-When the --bulletin (or -b) flag is given, the new message will be a bulletin message rather than a private message.  This means that its message number and handling order will not be encoded into its subject line, and that no delivery receipts will be expected for it.  It is the user's responsibility to ensure that the To: address for the message is a bulletin address.
-
 If a «new-message-id» is provided on the command line, the new message is created with that local message ID.  The sequence number in it will be incremented as needed to make it unique.  The «new-message-id» may be just an integer, in which case the message number and prefix in the incident / activation configuration are used (see "packet help config").  If no «new-message-id» is given, one will be automatically assigned based on the incident / activation configuration.
 `
 
 func cmdNew(args []string) (err error) {
 	var (
-		replyID  string
-		copyID   string
-		bulletin bool
-		nmtype   string
-		nmid     string
-		msg      message.Message
-		flags    = pflag.NewFlagSet("new", pflag.ContinueOnError)
+		replyID string
+		copyID  string
+		nmtype  string
+		nmid    string
+		msg     message.Message
+		flags   = pflag.NewFlagSet("new", pflag.ContinueOnError)
 	)
 	flags.StringVarP(&replyID, "reply", "r", "", "create a reply to a received message")
 	flags.StringVarP(&copyID, "copy", "c", "", "create a copy of an existing message")
-	flags.BoolVarP(&bulletin, "bulletin", "b", false, "create a bulletin message")
 	flags.Usage = func() {} // we do our own
 	if err = flags.Parse(args); err == pflag.ErrHelp {
 		return cmdHelp([]string{"new"})
@@ -108,11 +104,12 @@ func cmdNew(args []string) (err error) {
 			return errors.New("no message numbering pattern defined in configuration; must provide complete message ID")
 		}
 	}
-	return doNew(copyID, replyID, bulletin, msg, nmid)
+	return doNew(copyID, replyID, msg, nmid)
 }
 
-func doNew(copyID, replyID string, bulletin bool, msg message.Message, nmid string) (err error) {
+func doNew(copyID, replyID string, msg message.Message, nmid string) (err error) {
 	var (
+		lmi    string
 		srclmi string
 		env    *envelope.Envelope
 		srcmsg message.Message
@@ -166,7 +163,7 @@ func doNew(copyID, replyID string, bulletin bool, msg message.Message, nmid stri
 				*msg.Base().FReference = *srcmsg.Base().FOriginMsgID
 			}
 		}
-		env.Bulletin = bulletin
+		_, env.Bulletin = msg.(*bulletin.Bulletin)
 		if env.To == "" {
 			env.To = config.C.DefDest
 		}
@@ -199,23 +196,26 @@ func doNew(copyID, replyID string, bulletin bool, msg message.Message, nmid stri
 		}
 	}
 	if incident.MsgIDRE.MatchString(nmid) {
-		*msg.Base().FOriginMsgID = incident.UniqueMessageID(nmid)
+		lmi = incident.UniqueMessageID(nmid)
 	} else if nmid != "" {
 		if match := incident.MsgIDRE.FindStringSubmatch(config.C.TxMessageID); match != nil {
-			*msg.Base().FOriginMsgID = incident.UniqueMessageID(match[1] + "-" + nmid + match[3])
+			lmi = incident.UniqueMessageID(match[1] + "-" + nmid + match[3])
 		}
 	} else if config.C.TxMessageID != "" {
-		*msg.Base().FOriginMsgID = incident.UniqueMessageID(config.C.TxMessageID)
+		lmi = incident.UniqueMessageID(config.C.TxMessageID)
 	} else if config.C.RxMessageID != "" {
-		*msg.Base().FOriginMsgID = incident.UniqueMessageID(config.C.RxMessageID)
+		lmi = incident.UniqueMessageID(config.C.RxMessageID)
+	}
+	if omi := msg.Base().FOriginMsgID; omi != nil {
+		*omi = lmi
 	}
 	if cio.InputIsTerm && cio.OutputIsTerm {
 		return doEdit("", env, msg, "", false)
 	}
-	if err = incident.SaveMessage(*msg.Base().FOriginMsgID, "", env, msg, false, false); err != nil {
-		return fmt.Errorf("saving %s: %s", *msg.Base().FOriginMsgID, err)
+	if err = incident.SaveMessage(lmi, "", env, msg, false, false); err != nil {
+		return fmt.Errorf("saving %s: %s", lmi, err)
 	}
-	fmt.Println(*msg.Base().FOriginMsgID)
+	fmt.Println(lmi)
 	return nil
 }
 

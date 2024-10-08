@@ -178,14 +178,19 @@ LOOP: // Run the editor loop.
 		return nil
 	}
 	// Make sure we have a valid LMI.  We have to have one to save the file.
-	newlmi := *msg.Base().FOriginMsgID
+	var newlmi string
+	if omi := msg.Base().FOriginMsgID; omi != nil {
+		newlmi = *omi
+	}
 	if !incident.MsgIDRE.MatchString(newlmi) {
 		if lmi != "" {
 			newlmi = lmi // restore the one it had when we started
 		} else {
-			newlmi = incident.UniqueMessageID("AAA-001")
+			newlmi = incident.UniqueMessageID("AAA-001P")
 		}
-		*msg.Base().FOriginMsgID = newlmi
+		if omi := msg.Base().FOriginMsgID; omi != nil {
+			*msg.Base().FOriginMsgID = newlmi
+		}
 		cio.Confirm("NOTE: The local message ID has been set to %s.", newlmi)
 	}
 	// Notify the user if we took the message out of the queue.
