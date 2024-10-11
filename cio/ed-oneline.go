@@ -25,7 +25,7 @@ func (e *editor) onelineMode() (modefunc, EditResult, error) {
 	}
 	for {
 		// Draw the label, entry area, and hint.
-		var buf = newScreenBuf(Width - 1)
+		buf := newScreenBuf(Width - 1)
 		buf.writeAt(0, 0, colorLabel, e.field.Label)
 		buf.fill(entryx, fieldWidth, 0, colorEntry)
 		if len(e.value) <= fieldWidth && e.field.EditHint != "" &&
@@ -33,7 +33,7 @@ func (e *editor) onelineMode() (modefunc, EditResult, error) {
 			buf.writeAt(entryx+fieldWidth+2, 0, colorHint, e.field.EditHint)
 		}
 		// Write the value with selection.
-		var value = e.value
+		value := e.value
 		if e.field.HideValue {
 			value = hideValue(value)
 		}
@@ -131,6 +131,12 @@ func (e *editor) onelineMode() (modefunc, EditResult, error) {
 		case keyBackTab:
 			return nil, ResultPrevious, nil
 		case 0x0A, 0x0D: // Enter
+			if !verbatim && e.cursor == len(e.value) && e.cursor != 0 && e.cursor == e.sele && e.sels == 0 {
+				// CR when the whole field is selected.  They're
+				// probably just trying to skip to the next
+				// field.
+				return nil, ResultNext, nil
+			}
 			if verbatim || (e.cursor != 0 && e.field.Multiline) {
 				// Add a literal newline and switch to multiline mode.
 				e.value = e.value[:e.sels] + "\n" + e.value[e.sele:]
@@ -191,6 +197,7 @@ func autocomplete(s string, choices []string) (match string) {
 	}
 	return match
 }
+
 func diffindex(a, b string) int {
 	for i := 0; i < len(a) && i < len(b); i++ {
 		if a[i] != b[i] {

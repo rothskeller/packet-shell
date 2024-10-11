@@ -13,9 +13,9 @@ func (e *editor) multilineMode() (modefunc, EditResult, error) {
 		cleanTerminal()
 	}()
 	for {
-		var buf = newScreenBuf(Width - 1)
+		buf := newScreenBuf(Width - 1)
 		buf.writeAt(0, 0, colorLabel, e.field.Label)
-		var value = e.value
+		value := e.value
 		if e.field.HideValue {
 			value = hideValue(value)
 		}
@@ -126,6 +126,12 @@ func (e *editor) multilineMode() (modefunc, EditResult, error) {
 		case 0x0A, 0x0D: // Enter
 			if e.cursor == 0 && e.value == "" {
 				continue // ignore newlines in empty field
+			}
+			if e.cursor == len(e.value) && e.cursor > 0 && e.sele == e.cursor && e.sels == 0 {
+				// Enter when the entire content of the field is
+				// selected.  They're probably just trying to
+				// skip the entire field.
+				return nil, ResultNext, nil
 			}
 			if e.cursor == len(e.value) && e.cursor > 1 && e.value[e.cursor-1] == '\n' && e.value[e.cursor-2] == '\n' {
 				// Three Enters in a row: they're probably
