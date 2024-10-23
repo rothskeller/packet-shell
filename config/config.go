@@ -72,8 +72,10 @@ type BulletinConfig struct {
 }
 
 // C expresses the session configuration.
-var C PacketConfig
-var possiblePorts []string
+var (
+	C             PacketConfig
+	possiblePorts []string
+)
 
 func init() {
 	C.Unread = make(map[string]bool)
@@ -181,7 +183,7 @@ func SaveConfig() {
 	if home, err = os.UserHomeDir(); err != nil || home == "" {
 		return
 	}
-	var reduced = PacketConfig{
+	reduced := PacketConfig{
 		BBS:        C.BBS,
 		BBSAddress: C.BBSAddress,
 		SerialPort: C.SerialPort,
@@ -443,22 +445,22 @@ func makeConfigFields() []*message.Field {
 			Value:    &C.DefDest,
 			EditHelp: `This is an optional list of "To" addresses to be filled into every new message.`,
 		}),
-		message.NewAddressListField(&message.Field{
+		message.NewTextField(&message.Field{
 			Label:    "Default To ICS Position",
 			Value:    &C.DefToPosition,
 			EditHelp: `This is an optional value for the "To ICS Position" field in new messages.`,
 		}),
-		message.NewAddressListField(&message.Field{
+		message.NewTextField(&message.Field{
 			Label:    "Default To Location",
 			Value:    &C.DefToLocation,
 			EditHelp: `This is an optional value for the "To Location" field in new messages.`,
 		}),
-		message.NewAddressListField(&message.Field{
+		message.NewTextField(&message.Field{
 			Label:    "Default From ICS Position",
 			Value:    &C.DefFromPosition,
 			EditHelp: `This is an optional value for the "From ICS Position" field in new messages.`,
 		}),
-		message.NewAddressListField(&message.Field{
+		message.NewTextField(&message.Field{
 			Label:    "Default From Location",
 			Value:    &C.DefFromLocation,
 			EditHelp: `This is an optional value for the "From Location" field in new messages.`,
