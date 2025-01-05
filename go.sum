@@ -19,6 +19,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rothskeller/packet v1.10.0 h1:xxT9YdBeLF8PL987zlz0C1a1iRI9lxVmZhAQkYGMMJY=
 github.com/rothskeller/packet v1.10.0/go.mod h1:cDPt3pbczi7NvR3n1U7NQHxX6Y8a8KXHspyiMPsh0dA=
+github.com/rothskeller/packet v1.10.1 h1:HtiDluV1w/XMQwok/k9dCZoJEomCAw2eulGfkfZQLpE=
+github.com/rothskeller/packet v1.10.1/go.mod h1:cDPt3pbczi7NvR3n1U7NQHxX6Y8a8KXHspyiMPsh0dA=
 github.com/rothskeller/pdf v1.3.0 h1:PmNt33YWSYpxhY3SqKUKZYqgJ5wFjkqMCTO7Y26X2NA=
 github.com/rothskeller/pdf v1.3.0/go.mod h1:IaHv090aWF/QQYo/THVjpQWiOvN2Sk90jyzT8nq/YdI=
 github.com/ruudk/golang-pdf417 v0.0.0-20181029194003-1af4ab5afa58/go.mod h1:6lfFZQK844Gfx8o5WFuvpxWRwnSoipWe/p622j1v06w=
