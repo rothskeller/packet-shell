@@ -18,8 +18,9 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const newSlug = `Create a new outgoing message`
-const newHelp = `
+const (
+	newSlug = `Create a new outgoing message`
+	newHelp = `
 usage: packet new ⇥«new-message-type» [«new-message-id»]
        packet new ⇥--copy «message-id» [«new-message-id»]
        packet new ⇥--reply «message-id» [«new-message-type»] [«new-message-id»]
@@ -36,6 +37,7 @@ When neither the --reply nor --copy flag is given, an empty message of «new-mes
 
 If a «new-message-id» is provided on the command line, the new message is created with that local message ID.  The sequence number in it will be incremented as needed to make it unique.  The «new-message-id» may be just an integer, in which case the message number and prefix in the incident / activation configuration are used (see "packet help config").  If no «new-message-id» is given, one will be automatically assigned based on the incident / activation configuration.
 `
+)
 
 func cmdNew(args []string) (err error) {
 	var (
@@ -129,6 +131,7 @@ func doNew(copyID, replyID string, msg message.Message, nmid string) (err error)
 		} else {
 			env = &envelope.Envelope{To: env.To, SubjectLine: env.SubjectLine}
 		}
+		cio.Confirm("Creating a new %s as a copy of %s.", msg.Base().Type.Name, srclmi)
 	} else {
 		env = new(envelope.Envelope)
 		if replyID != "" {
@@ -162,6 +165,9 @@ func doNew(copyID, replyID string, msg message.Message, nmid string) (err error)
 			if srcmsg.Base().FOriginMsgID != nil && msg.Base().FReference != nil {
 				*msg.Base().FReference = *srcmsg.Base().FOriginMsgID
 			}
+			cio.Confirm("Creating a new %s as a reply to %s.", msg.Base().Type.Name, srclmi)
+		} else {
+			cio.Confirm("Creating a new %s.", msg.Base().Type.Name)
 		}
 		_, env.Bulletin = msg.(*bulletin.Bulletin)
 		if env.To == "" {
