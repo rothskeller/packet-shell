@@ -12,8 +12,9 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const showSlug = `Show a message, or a field of a message`
-const showHelp = `
+const (
+	showSlug = `Show a message, or a field of a message`
+	showHelp = `
 usage: packet show ⇥«message-id»|config [«field-name»]
 
 The "show" (or "s") command displays a message in a two-column field-name / field-value format.  If standard output is a terminal, it is presented as a table; otherwise, it is printed in CSV format.  The "show" command can also display the value of a single field of the message.
@@ -22,6 +23,7 @@ The "show" (or "s") command displays a message in a two-column field-name / fiel
 
 «field-name» is an optional name of a single field to display.  It can be the PackItForms tag for the field (including the trailing period, if any), or it can be the full field name.  When standard output is a terminal, it can be a shortened version of the field name, such as "ocs" for "Operator Call Sign."
 `
+)
 
 func cmdShow(args []string) (err error) {
 	var (
@@ -32,12 +34,12 @@ func cmdShow(args []string) (err error) {
 		field    *message.Field
 		labellen int
 	)
-	var flags = pflag.NewFlagSet("show", pflag.ContinueOnError)
+	flags := pflag.NewFlagSet("show", pflag.ContinueOnError)
 	flags.Usage = func() {} // we do our own
 	if err = flags.Parse(args); err == pflag.ErrHelp {
 		return cmdHelp([]string{"show"})
 	} else if err != nil {
-		cio.Error(err.Error())
+		cio.Error("%s", err.Error())
 		return usage(showHelp)
 	}
 	if len(args) < 1 || len(args) > 2 {
@@ -61,6 +63,9 @@ func cmdShow(args []string) (err error) {
 			fields = append(fields, makeArtificialField("To", env.To))
 			fields = append(fields, makeArtificialField("Received", fmt.Sprintf("%s as %s", env.ReceivedDate.Format("01/02/2006 15:04"), lmi)))
 		} else {
+			if env.From != "" {
+				fields = append(fields, makeArtificialField("From", env.From))
+			}
 			if env.To != "" {
 				fields = append(fields, makeArtificialField("To", env.To))
 			}

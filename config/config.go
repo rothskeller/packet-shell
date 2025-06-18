@@ -257,6 +257,7 @@ func makeConfigFields() []*message.Field {
 				if nv == "Radio" {
 					C.hostname = ""
 					C.port = ""
+					C.Password = ""
 				} else {
 					C.ax25addr = ""
 				}
