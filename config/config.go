@@ -91,12 +91,12 @@ func init() {
 	// those.
 	readConfig(packetConf)
 	// Prepare the fake "message" for editing/showing the configuration.
-	C.BaseMessage.Type = &message.Type{
+	C.Type = &message.Type{
 		Tag:     "CONFIG",
 		Name:    "packet incident configuration",
 		Article: "a",
 	}
-	C.BaseMessage.Fields = makeConfigFields()
+	C.Fields = makeConfigFields()
 }
 
 // guessSerialPort makes a swag at the device file for the serial port connected
@@ -248,6 +248,20 @@ func makeConfigFields() []*message.Field {
 			Presence:   message.Required,
 			TableValue: message.TableOmit,
 			EditHelp:   `This specifies how the "packet" command will connect to the BBS.  "Radio" means connecting to the BBS over the air, by way of a Kantronics KPC-3 Plus or compatible TNC connected to a radio transceiver.  "Internet" means connecting to the BBS over the Internet.  The choice is required.`,
+			EditApply: func(f *message.Field, s string) {
+				nv := f.Choices.ToPIFO(strings.TrimSpace(s))
+				if nv != C.connType {
+					C.BBS = ""
+					C.BBSAddress = ""
+				}
+				if nv == "Radio" {
+					C.hostname = ""
+					C.port = ""
+				} else {
+					C.ax25addr = ""
+				}
+				C.connType = nv
+			},
 		}),
 		message.NewTextField(&message.Field{
 			Label: "BBS Address",
