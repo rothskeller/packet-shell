@@ -433,11 +433,12 @@ func makeConfigFields() []*message.Field {
 				}
 				return C.RxMessageID
 			},
-			EditApply: func(_ *message.Field, s string) {
-				if C.TxMessageID == C.RxMessageID {
-					C.TxMessageID = s
+			EditApply: func(f *message.Field, s string) {
+				match := C.TxMessageID == C.RxMessageID
+				message.MessageNumberEditApply(f, s)
+				if match {
+					C.TxMessageID = C.RxMessageID
 				}
-				C.RxMessageID = s
 			},
 		}),
 		message.NewAddressListField(&message.Field{

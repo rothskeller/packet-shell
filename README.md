@@ -6,7 +6,7 @@ It is completely interoperable with the standard SCCo packet software ([Outpost]
 and [PackItForms]), but it is not derived from them or dependent on them.
 
 [Outpost]: http://www.outpostpm.org/
-[PackItForms]: https://www.scc-ares-races.org/data/packet/about-packitforms.html
+[PackItForms]: https://www.scc-ares-races.org/operations/equipment/packet/software/packitforms
 
 The packet shell has been tested on Windows, Mac OS, and Linux. It is suitable
 for both human and scripted use. It has no external dependencies, and does not
