@@ -1,6 +1,8 @@
 package cio
 
-import "errors"
+import (
+	"errors"
+)
 
 func (e *editor) multilineMode() (modefunc, EditResult, error) {
 	var (

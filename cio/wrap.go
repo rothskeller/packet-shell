@@ -45,6 +45,8 @@ func WrapText(s string) (wrapped string) {
 	return wrapped
 }
 
+// W67:  [0 2 70] goes to [0 2 67 71]
+
 // wrap wraps a string to fit within the specified width.  It wraps at
 // whitespace where possible, and mid-word if necessary.  The returned offsets
 // array gives the offset into the original string of the start of each line.
@@ -63,7 +65,7 @@ func wrap(s string, width int) (lines []string, offsets []int) {
 				lines = append(lines, line[:width])
 				line = line[width:]
 				offset += width
-				offsets = append(offsets, width)
+				offsets = append(offsets, offset)
 			}
 		}
 		lines = append(lines, line)
