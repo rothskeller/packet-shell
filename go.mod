@@ -3,7 +3,7 @@ module github.com/rothskeller/packet-shell
 go 1.21
 
 require (
-	github.com/rothskeller/packet v1.10.3
+	github.com/rothskeller/packet v1.10.5
 	github.com/spf13/pflag v1.0.5
 	go.bug.st/serial v1.6.0
 	golang.org/x/exp v0.0.0-20240808152545-0cdaa3abc0fa
