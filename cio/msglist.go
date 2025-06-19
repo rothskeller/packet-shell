@@ -17,8 +17,10 @@ type ListItem struct {
 	NoHeader bool
 }
 
-var listCW *csv.Writer
-var listItemSeen bool
+var (
+	listCW       *csv.Writer
+	listItemSeen bool
+)
 
 func ListMessage(li *ListItem) {
 	if !OutputIsTerm {
@@ -60,7 +62,14 @@ func listMessageTable(li *ListItem) {
 		lineColor = colorPriority
 	}
 	if !li.Time.IsZero() {
-		print(lineColor, li.Time.Format("15:04 "))
+		now := time.Now()
+		if now.Year() != li.Time.Year() {
+			print(lineColor, li.Time.Format("2006  "))
+		} else if now.Month() != li.Time.Month() || now.Day() != li.Time.Day() {
+			print(lineColor, li.Time.Format("01/02 "))
+		} else {
+			print(lineColor, li.Time.Format("15:04 "))
+		}
 	} else if li.Flag == "QUEUE" {
 		print(colorWarningBG, li.Flag)
 		print(lineColor, " ")
