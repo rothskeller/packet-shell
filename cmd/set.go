@@ -14,8 +14,9 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const setSlug = `Set the value of a field of a message`
-const setHelp = `
+const (
+	setSlug = `Set the value of a field of a message`
+	setHelp = `
 usage: packet set ⇥[flags] «message-id»|config «field-name» [«value»]
   --force  ⇥allow invalid value
 
@@ -25,6 +26,7 @@ The "set" command sets the value of a field of a message.  If a «value» is pro
 
 «field-name» is the name of the field to set.  It can be the PackItForms tag for the field (including the trailing period, if any), or it can be the full field name.  In interactive (--no-script) mode, it can be a shortened version of the field name, such as "ocs" for "Operator Call Sign."
 `
+)
 
 func cmdSet(args []string) (err error) {
 	var (
@@ -45,7 +47,7 @@ func cmdSet(args []string) (err error) {
 	if err = flags.Parse(args); err == pflag.ErrHelp {
 		return cmdHelp([]string{"set"})
 	} else if err != nil {
-		cio.Error(err.Error())
+		cio.Error("%s", err.Error())
 		return usage(setHelp)
 	}
 	args = flags.Args()
@@ -96,7 +98,7 @@ func cmdSet(args []string) (err error) {
 	// If we were given a new value on the command line, apply it.
 	// Otherwise, allow the user to edit the field.
 	if len(args) > 2 {
-		var value = strings.Join(args[2:], " ")
+		value := strings.Join(args[2:], " ")
 		value = strings.Map(func(r rune) rune { // ensure pure ASCII
 			if (r >= ' ' && r <= '~') || r == '\n' {
 				return r
@@ -122,7 +124,7 @@ func cmdSet(args []string) (err error) {
 		if p := field.EditValid(field); p != "" {
 			return errors.New(p)
 		}
-		var newlmi = *field.Value
+		newlmi := *field.Value
 		if newlmi != lmi {
 			if incident.UniqueMessageID(newlmi) != newlmi {
 				return fmt.Errorf("message %s already exists", newlmi)
@@ -133,7 +135,7 @@ func cmdSet(args []string) (err error) {
 	// Report any new problems.
 	for _, f := range fields {
 		if p := f.EditValid(f); p != "" && (p != problems[f] || f == field) {
-			cio.Error(p)
+			cio.Error("%s", p)
 			newprob = true
 		}
 	}

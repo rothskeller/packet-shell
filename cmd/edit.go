@@ -14,8 +14,9 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-const editSlug = `Edit an unsent message`
-const editHelp = `
+const (
+	editSlug = `Edit an unsent message`
+	editHelp = `
 usage: packet edit ⇥[flags] «message-id»|config [«field-name»]
   -e, --errors  ⇥edit only fields that have errors
 
@@ -53,6 +54,7 @@ If you enter an invalid value for a field, an appropriate error will be shown an
 
 When finished editing, if the message is fully valid and not already queued to be sent, the editor will ask whether to queue it.  If the message is already queued but is not valid, it will be removed from the queue.  (To force the queueing of an invalid message, use the "packet queue" command.)
 `
+)
 
 func cmdEdit(args []string) (err error) {
 	var (
@@ -71,7 +73,7 @@ func cmdEdit(args []string) (err error) {
 	if err = flags.Parse(args); err == pflag.ErrHelp {
 		return cmdHelp([]string{"edit"})
 	} else if err != nil {
-		cio.Error(err.Error())
+		cio.Error("%s", err.Error())
 		return usage(editHelp)
 	}
 	if flags.NArg() < 1 || flags.NArg() > 2 {

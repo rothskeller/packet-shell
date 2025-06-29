@@ -11,13 +11,15 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const queueSlug = `Add an unsent message to the send queue`
-const queueHelp = `
+const (
+	queueSlug = `Add an unsent message to the send queue`
+	queueHelp = `
 usage: packet queue [--force] «message-id»
   --force  queue a message with invalid contents
 
 The "queue" command adds an unsent message to the send queue, if it is not already there.  The message will be sent during the next BBS connection.  «message-id» must be the local message ID of an unsent outgoing message.  It can be just the numeric part of the ID if that is unique.
 `
+)
 
 func cmdQueue(args []string) (err error) {
 	var (
@@ -33,7 +35,7 @@ func cmdQueue(args []string) (err error) {
 	if err = flags.Parse(args); err == pflag.ErrHelp {
 		return cmdHelp([]string{"queue"})
 	} else if err != nil {
-		cio.Error(err.Error())
+		cio.Error("%s", err.Error())
 		return usage(queueHelp)
 	}
 	args = flags.Args()
@@ -63,7 +65,7 @@ func cmdQueue(args []string) (err error) {
 			for _, f := range msg.Base().Fields {
 				if f.EditHelp != "" { // only check editable fields
 					if problem := f.EditValid(f); problem != "" {
-						cio.Error(problem)
+						cio.Error("%s", problem)
 						foundProblem = true
 					}
 				}

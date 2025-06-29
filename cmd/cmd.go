@@ -40,7 +40,7 @@ func Run(args []string) (ok bool) {
 		err = run(args)
 	}
 	if err != nil && err != ErrQuit {
-		cio.Error(err.Error())
+		cio.Error("%s", err.Error())
 		return false
 	}
 	return true
@@ -126,7 +126,7 @@ func shell() (err error) {
 			}
 		}
 		if args, in, out, err = parseCommandLine(line); err != nil {
-			cio.Error(err.Error())
+			cio.Error("%s", err.Error())
 			continue
 		}
 		if len(args) != 0 && args[0] == "packet" {
@@ -159,7 +159,7 @@ func shell() (err error) {
 		cio.Detect()
 		// Handle the result of the command.
 		if err != nil && err != ErrQuit {
-			cio.Error(err.Error())
+			cio.Error("%s", err.Error())
 		}
 		if err == ErrQuit {
 			return nil
@@ -315,6 +315,7 @@ func matchFieldName(fname, in string, caseSensitive bool) (mUC, mCH int, ok bool
 	}
 	return mUC2, mCH2, ok2
 }
+
 func downcase(b byte) byte {
 	if b >= 'a' && b <= 'z' {
 		return b + 'A' - 'a'

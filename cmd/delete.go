@@ -11,20 +11,22 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const deleteSlug = `Delete an unsent message`
-const deleteHelp = `
+const (
+	deleteSlug = `Delete an unsent message`
+	deleteHelp = `
 usage: packet delete «full-message-id»
 
 The "delete" command deletes an outgoing message that has not yet been sent.  For safety, the argument must be the full local message ID of the message; the usual shorthands for message IDs are not accepted by the "delete" command.
 `
+)
 
 func cmdDelete(args []string) (err error) {
-	var flags = pflag.NewFlagSet("delete", pflag.ContinueOnError)
+	flags := pflag.NewFlagSet("delete", pflag.ContinueOnError)
 	flags.Usage = func() {} // we do our own
 	if err = flags.Parse(args); err == pflag.ErrHelp {
 		return cmdHelp([]string{"delete"})
 	} else if err != nil {
-		cio.Error(err.Error())
+		cio.Error("%s", err.Error())
 		return usage(deleteHelp)
 	}
 	if len(args) != 1 {

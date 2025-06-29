@@ -15,14 +15,16 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const pdfSlug = `Open message in PDF form in system viewer`
-const pdfHelp = `
+const (
+	pdfSlug = `Open message in PDF form in system viewer`
+	pdfHelp = `
 usage: packet pdf «message-id»
 
 The "pdf" command renders the message in PDF format if it isn't already rendered, and then opens it in the system PDF viewer.  The message must be of a type that supports PDF rendering (i.e., a PackItForms form), and PDF rendering support must have been built into the program.  The rendered PDF is stored at «local-message-id».pdf, with a symbolic link from «remote-message-id».pdf if a remote message ID is known.
 
 «message-id» must be the local or remote message ID of the message to display.  It can be just the numeric part of the ID if that is unique.
 `
+)
 
 func cmdPDF(args []string) (err error) {
 	var (
@@ -33,12 +35,12 @@ func cmdPDF(args []string) (err error) {
 		pdfFI os.FileInfo
 		open  *exec.Cmd
 	)
-	var flags = pflag.NewFlagSet("pdf", pflag.ContinueOnError)
+	flags := pflag.NewFlagSet("pdf", pflag.ContinueOnError)
 	flags.Usage = func() {} // we do our own
 	if err = flags.Parse(args); err == pflag.ErrHelp {
 		return cmdHelp([]string{"pdf"})
 	} else if err != nil {
-		cio.Error(err.Error())
+		cio.Error("%s", err.Error())
 		return usage(pdfHelp)
 	}
 	if len(args) != 1 {
@@ -86,5 +88,4 @@ func cmdPDF(args []string) (err error) {
 		config.SaveConfig()
 	}
 	return nil
-
 }

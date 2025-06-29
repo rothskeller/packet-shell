@@ -14,8 +14,9 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const ics309Slug = `Generate and show ICS-309 comms log`
-const ics309Help = `
+const (
+	ics309Slug = `Generate and show ICS-309 comms log`
+	ics309Help = `
 usage: packet ics309
 
 The "ics309" (or "309") command generates an ICS-309 communications log in both CSV format and, if PDF rendering support has been built into the program, PDF format.  It lists all sent and received messages in the current incident (i.e., current working directory), including receipts.  The generated log is stored in "ics309.csv" and "ics309.pdf".
@@ -24,14 +25,15 @@ After generating the log, the "ics309" command displays the log.  If standard ou
 
 NOTE:  Packet commands automatically remove the saved ICS-309 files after any change to any message, to avoid reliance on a stale communications log.  Simply run "ics309" again to generate a new one.
 `
+)
 
 func cmdICS309(args []string) (err error) {
-	var flags = pflag.NewFlagSet("ics309", pflag.ContinueOnError)
+	flags := pflag.NewFlagSet("ics309", pflag.ContinueOnError)
 	flags.Usage = func() {} // we do our own
 	if err = flags.Parse(args); err == pflag.ErrHelp {
 		return cmdHelp([]string{"ics309"})
 	} else if err != nil {
-		cio.Error(err.Error())
+		cio.Error("%s", err.Error())
 		return usage(ics309Help)
 	}
 	if len(args) != 0 {

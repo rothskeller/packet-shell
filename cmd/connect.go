@@ -23,8 +23,9 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const connectSlug = `Connect to the BBS to send and/or receive messages`
-const connectHelp = `
+const (
+	connectSlug = `Connect to the BBS to send and/or receive messages`
+	connectHelp = `
 usage: packet connect [flags]
   -i, --immediate  ⇥immediate messages only
   -r, --receive    ⇥receiving incoming messages
@@ -37,6 +38,7 @@ When receiving messages without the --immediate flag, any scheduled bulletin che
 
 The "connect" command lists all messages sent and received, except for receipts.  Run "packet help list" for details of the output format.
 `
+)
 
 type connection struct {
 	tosend        []string
@@ -68,7 +70,7 @@ func cmdConnect(args []string) (err error) {
 	if err = flags.Parse(args); err == pflag.ErrHelp {
 		return cmdHelp([]string{"connect"})
 	} else if err != nil {
-		cio.Error(err.Error())
+		cio.Error("%s", err.Error())
 		return usage(connectHelp)
 	}
 	if flags.NArg() != 0 {
@@ -336,7 +338,7 @@ func (c *connection) sendMessage(filename string, env *envelope.Envelope, msg me
 // receiveMessages receives all messages in the current mailbox (i.e., the one
 // we connected to).
 func (c *connection) receiveMessages() (err error) {
-	var msgnum = 1
+	msgnum := 1
 	for {
 		var done bool
 		if done, err = c.receiveMessage("", msgnum); err != nil {
@@ -395,7 +397,7 @@ func (c *connection) receiveMessage(area string, msgnum int) (done bool, err err
 			cio.Confirm("NOTE: discarding receipt for unknown message %q", msg.MessageSubject)
 		} else {
 			// Display the fact that our message was delivered.
-			var li = listItemForMessage(lmi, msg.LocalMessageID, oenv)
+			li := listItemForMessage(lmi, msg.LocalMessageID, oenv)
 			li.Flag = "HAVE RCPT"
 			cio.ListMessage(li)
 		}
@@ -406,7 +408,7 @@ func (c *connection) receiveMessage(area string, msgnum int) (done bool, err err
 		if mb := msg.Base(); mb.FOriginMsgID != nil {
 			rmi = *mb.FOriginMsgID
 		}
-		var li = listItemForMessage(lmi, rmi, env)
+		li := listItemForMessage(lmi, rmi, env)
 		cio.ListMessage(li)
 		// If we have oenv/omsg, it's a delivery receipt to be sent.
 		if oenv != nil {

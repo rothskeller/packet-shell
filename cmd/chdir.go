@@ -12,8 +12,9 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const chdirSlug = `Switch to a different incident directory`
-const chdirHelp = `
+const (
+	chdirSlug = `Switch to a different incident directory`
+	chdirHelp = `
 usage: cd [«directory»]
        mkdir «directory»
        pwd
@@ -22,14 +23,15 @@ When run without an argument, the "cd" (or "chdir" or "pwd") command displays th
 
 When run with an argument, the "cd" (or "chdir", "mkdir", or "md") command switches to the named incident directory.  If the directory does not exist, it will be created if the command name was "mkdir" or "md".  If the command name was "cd" or "chdir" and the command in running in interactive (--no-script) mode, the user is asked whether to create it.
 `
+)
 
 func cmdChdir(cmdname string, args []string) (err error) {
-	var flags = pflag.NewFlagSet("chdir", pflag.ContinueOnError)
+	flags := pflag.NewFlagSet("chdir", pflag.ContinueOnError)
 	flags.Usage = func() {} // we do our own
 	if err = flags.Parse(args); err == pflag.ErrHelp {
 		return cmdHelp([]string{"chdir"})
 	} else if err != nil {
-		cio.Error(err.Error())
+		cio.Error("%s", err.Error())
 		return usage(chdirHelp)
 	}
 	switch cmdname {
@@ -76,7 +78,7 @@ func doChdir(dir string, automake bool) (err error) {
 		if !cio.InputIsTerm || !cio.OutputIsTerm {
 			return err
 		}
-		var create = "No"
+		create := "No"
 		_, err = cio.EditField(message.NewRestrictedField(&message.Field{
 			Label:    "Create directory?",
 			Value:    &create,

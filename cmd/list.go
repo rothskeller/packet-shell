@@ -13,8 +13,9 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const listSlug = `List all messages in current directory`
-const listHelp = `
+const (
+	listSlug = `List all messages in current directory`
+	listHelp = `
 usage: packet list
 
 The "list" (or "l") command lists stored messages.  Messages are listed in chronological order.  If standard output is a terminal, messages are listed in a table; otherwise, they are listed in CSV format.
@@ -51,16 +52,17 @@ Several markers can appear in the list for special cases.  These appear in the F
 
 The "connect" command will sometimes show sent messages with a destination message ID on a green background.  This is a transient indication that we just received a delivery receipt for the message.
 `
+)
 
 func cmdList(args []string) (err error) {
 	var lmis []string
 
-	var flags = pflag.NewFlagSet("list", pflag.ContinueOnError)
+	flags := pflag.NewFlagSet("list", pflag.ContinueOnError)
 	flags.Usage = func() {} // we do our own
 	if err = flags.Parse(args); err == pflag.ErrHelp {
 		return cmdHelp([]string{"list"})
 	} else if err != nil {
-		cio.Error(err.Error())
+		cio.Error("%s", err.Error())
 		return usage(listHelp)
 	}
 	if len(args) != 0 {
@@ -124,10 +126,10 @@ func listItemForMessage(lmi, rmi string, env *envelope.Envelope) (li *cio.ListIt
 		if rmi != "" {
 			li.From = rmi
 		} else if env.ReceivedArea != "" {
-			var from = strings.ToUpper(env.ReceivedArea)
+			from := strings.ToUpper(env.ReceivedArea)
 			li.From = strings.Replace(from, "@ALL", "@", 1) // for brevity
 		} else if addrs, err := envelope.ParseAddressList(env.From); err == nil {
-			var from, _, _ = strings.Cut(addrs[0].Address, "@")
+			from, _, _ := strings.Cut(addrs[0].Address, "@")
 			li.From = strings.ToUpper(from)
 		} else {
 			li.From = "??????"

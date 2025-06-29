@@ -11,12 +11,14 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const draftSlug = `Remove an unsent message from the send queue`
-const draftHelp = `
+const (
+	draftSlug = `Remove an unsent message from the send queue`
+	draftHelp = `
 usage: packet draft «message-id»
 
 The "draft" command removes an unsent message from the send queue, returning it to draft status.  «message-id» must be the local message ID of an unsent outgoing message.  It can be just the numeric part of the ID if that is unique.
 `
+)
 
 func cmdDraft(args []string) (err error) {
 	var (
@@ -25,12 +27,12 @@ func cmdDraft(args []string) (err error) {
 		msg message.Message
 		li  *cio.ListItem
 	)
-	var flags = pflag.NewFlagSet("draft", pflag.ContinueOnError)
+	flags := pflag.NewFlagSet("draft", pflag.ContinueOnError)
 	flags.Usage = func() {} // we do our own
 	if err = flags.Parse(args); err == pflag.ErrHelp {
 		return cmdHelp([]string{"draft"})
 	} else if err != nil {
-		cio.Error(err.Error())
+		cio.Error("%s", err.Error())
 		return usage(draftHelp)
 	}
 	if len(args) != 1 {

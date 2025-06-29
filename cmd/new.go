@@ -54,11 +54,11 @@ func cmdNew(args []string) (err error) {
 	if err = flags.Parse(args); err == pflag.ErrHelp {
 		return cmdHelp([]string{"new"})
 	} else if err != nil {
-		cio.Error(err.Error())
+		cio.Error("%s", err.Error())
 		return usage(newHelp)
 	}
 	if err = gaveMutuallyExclusiveFlags(flags, "copy", "reply"); err != nil {
-		cio.Error(err.Error())
+		cio.Error("%s", err.Error())
 		return usage(newHelp)
 	}
 	args = flags.Args()
@@ -85,7 +85,7 @@ func cmdNew(args []string) (err error) {
 			if replyID != "" && len(args) == 1 {
 				nmid, nmtype = nmtype, ""
 			} else {
-				cio.Error(err.Error())
+				cio.Error("%s", err.Error())
 				return usage(newHelp)
 			}
 		}

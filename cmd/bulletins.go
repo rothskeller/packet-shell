@@ -11,8 +11,9 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const bulletinsSlug = `Schedule periodic checks for bulletins`
-const bulletinsHelp = `
+const (
+	bulletinsSlug = `Schedule periodic checks for bulletins`
+	bulletinsHelp = `
 usage: packet bulletins ⇥[flags] [«area»...]
   -f, --frequency «interval»  ⇥set interval between checks (default 1h)
   -n, --now                   ⇥force check at next connect
@@ -31,6 +32,7 @@ If no «area»s are listed on the command line, but one of the --now, --stop, or
 
 In all cases, the command prints the resulting schedule of bulletin checks. If there are no «area»s on the command line and none of the three flags, printing the schedule is the only thing the command does.  The table will be in human format if stdout is a terminal, and in CSV format otherwise.
 `
+)
 
 var areaRE = regexp.MustCompile(`(?i)^(?:[A-Z][A-Z0-9]{0,7}@)?[A-Z][A-Z]{0,7}$`)
 
@@ -48,10 +50,10 @@ func cmdBulletins(args []string) (err error) {
 	if err = flags.Parse(args); err == pflag.ErrHelp {
 		return cmdHelp([]string{"bulletins"})
 	} else if err != nil {
-		cio.Error(err.Error())
+		cio.Error("%s", err.Error())
 		return usage(bulletinsHelp)
 	} else if err = gaveMutuallyExclusiveFlags(flags, "frequency", "now", "stop"); err != nil {
-		cio.Error(err.Error())
+		cio.Error("%s", err.Error())
 		return usage(bulletinsHelp)
 	}
 	if frequency <= 0 {
