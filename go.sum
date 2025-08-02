@@ -25,6 +25,8 @@ github.com/rothskeller/packet v1.10.3 h1:0ApindLwHhEVgP7RuHLHT5h2foTNKR0BVwYvUqS
 github.com/rothskeller/packet v1.10.3/go.mod h1:cDPt3pbczi7NvR3n1U7NQHxX6Y8a8KXHspyiMPsh0dA=
 github.com/rothskeller/packet v1.10.5 h1:sbbniQLHPLTAwP67QTMnLIfaw6gORjxl3NQ7mGITNbg=
 github.com/rothskeller/packet v1.10.5/go.mod h1:cDPt3pbczi7NvR3n1U7NQHxX6Y8a8KXHspyiMPsh0dA=
+github.com/rothskeller/packet v1.11.0 h1:INGGjEvZpHl7L8qfndsPPPPJ7Q3HxnoYZLJvg7MER3A=
+github.com/rothskeller/packet v1.11.0/go.mod h1:cDPt3pbczi7NvR3n1U7NQHxX6Y8a8KXHspyiMPsh0dA=
 github.com/rothskeller/pdf v1.3.0 h1:PmNt33YWSYpxhY3SqKUKZYqgJ5wFjkqMCTO7Y26X2NA=
 github.com/rothskeller/pdf v1.3.0/go.mod h1:IaHv090aWF/QQYo/THVjpQWiOvN2Sk90jyzT8nq/YdI=
 github.com/ruudk/golang-pdf417 v0.0.0-20181029194003-1af4ab5afa58/go.mod h1:6lfFZQK844Gfx8o5WFuvpxWRwnSoipWe/p622j1v06w=

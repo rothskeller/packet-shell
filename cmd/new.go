@@ -228,6 +228,10 @@ func doNew(copyID, replyID string, msg message.Message, nmid string) (err error)
 var aliases = map[string]string{
 	"ci": checkin.Type.Tag,
 	"co": checkout.Type.Tag,
+	// Temporary to avoid breaking the abbreviations people are used to with
+	// the new Veoci forms that aren't even valid yet.
+	"r": "RACES-MAR",
+	"s": "SheltStat",
 }
 
 var versionRE = regexp.MustCompile(`v\d(?:[.0-9]+\d)[a-z]*$`)
