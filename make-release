@@ -3,8 +3,11 @@ tag=`git tag --points-at`
 go install -tags packetpdf github.com/rothskeller/packet-shell/packet@$tag
 GOOS=windows go install -tags packetpdf github.com/rothskeller/packet-shell/packet@$tag
 GOOS=linux go install -tags packetpdf github.com/rothskeller/packet-shell/packet@$tag
+GOOS=linux GOARCH=arm GOARM=5 go install -tags packetpdf github.com/rothskeller/packet-shell/packet@$tag
+gunzip $HOME/go/bin/linux_arm64/packet.gz
 rm -rf dist
 mkdir dist
 cp $HOME/go/bin/packet dist/packet_${tag}_macos-amd64
 cp $HOME/go/bin/linux_amd64/packet dist/packet_${tag}_linux-amd64
+cp $HOME/go/bin/linux_arm64/packet dist/packet_${tag}_linux-arm64
 cp $HOME/go/bin/windows_amd64/packet.exe dist/packet_${tag}_windows-amd64.exe
