@@ -15,6 +15,11 @@ import (
 	"github.com/rothskeller/packet/xscmsg/bulletin"
 	"github.com/rothskeller/packet/xscmsg/checkin"
 	"github.com/rothskeller/packet/xscmsg/checkout"
+	"github.com/rothskeller/packet/xscmsg/cpodsite"
+	"github.com/rothskeller/packet/xscmsg/cpodupd"
+	"github.com/rothskeller/packet/xscmsg/resreq"
+	"github.com/rothskeller/packet/xscmsg/shelter"
+	"github.com/rothskeller/packet/xscmsg/sitrep"
 	"github.com/spf13/pflag"
 )
 
@@ -226,12 +231,14 @@ func doNew(copyID, replyID string, msg message.Message, nmid string) (err error)
 }
 
 var aliases = map[string]string{
+	"cc": cpodupd.Type.Tag,
 	"ci": checkin.Type.Tag,
 	"co": checkout.Type.Tag,
-	// Temporary to avoid breaking the abbreviations people are used to with
-	// the new Veoci forms that aren't even valid yet.
-	"r": "RACES-MAR",
-	"s": "SheltStat",
+	"cs": cpodsite.Type.Tag,
+	"cu": cpodupd.Type.Tag,
+	"rr": resreq.Type.Tag,
+	"sh": shelter.Type.Tag, // SheltStat must be requested explicitly
+	"sr": sitrep.Type.Tag,
 }
 
 var versionRE = regexp.MustCompile(`v\d(?:[.0-9]+\d)[a-z]*$`)
