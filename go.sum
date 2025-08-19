@@ -16,8 +16,8 @@ github.com/rothskeller/gofpdf v1.4.11 h1:XMd8ajD5+liCEED53cNgDm7mDqeSbQSKpx5oZWV
 github.com/rothskeller/gofpdf v1.4.11/go.mod h1:+8HntF5ve9MgB3pwfSTc5q/by7qDwuJ0IlEJ2JqOpRM=
 github.com/rothskeller/gofpdi v1.0.23 h1:kiTkI3QRatdIA3S/kDBnEgB9wgsddBZQJ9tu9k3M29Y=
 github.com/rothskeller/gofpdi v1.0.23/go.mod h1:EFAHfuH1d2ezTm4gUf1DF7s3Mt3C7LS/ommuC7AVUyM=
-github.com/rothskeller/packet v1.11.2 h1:UQp9PfXsYkoE/zJ8D958LlCMgCI8U8NpE7XPAwWScVw=
-github.com/rothskeller/packet v1.11.2/go.mod h1:YuULYqQNamOmZgKr/WHWyn1fgxPtDiq02Rb+KdaTupE=
+github.com/rothskeller/packet v1.11.3 h1:dOprwf0ZpbS4VGE59iFhJ/kYK3eAZz2AXgjhEbkdLOA=
+github.com/rothskeller/packet v1.11.3/go.mod h1:YuULYqQNamOmZgKr/WHWyn1fgxPtDiq02Rb+KdaTupE=
 github.com/rothskeller/pdf v1.3.2 h1:IHUlDVtHsVMceNh8Yx/vz/MZ7Of18YdpjLq0jSb0SEs=
 github.com/rothskeller/pdf v1.3.2/go.mod h1:yOASxtwTFsM8OcjSczCa/IzUlWM3GIezS7cn1wuN484=
 github.com/ruudk/golang-pdf417 v0.0.0-20181029194003-1af4ab5afa58/go.mod h1:6lfFZQK844Gfx8o5WFuvpxWRwnSoipWe/p622j1v06w=
